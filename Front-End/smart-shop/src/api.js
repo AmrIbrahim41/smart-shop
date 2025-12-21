@@ -25,27 +25,25 @@ export const ENDPOINTS = {
   // Auth
   LOGIN: "api/users/login/",
   REGISTER: "api/users/register/",
-  REFRESH: "users/token/refresh/",
-  UPDATE_PROFILE: "users/profile/update/",
-  //   Users & Orders
-  ORDERS_LIST: "orders/",
-  USERS_LIST: "users/",
-  DELIVER_ORDER: "orders/",
-  UPDATE_PROFILE: "users/profile/update/",
+  REFRESH: "api/users/token/refresh/",
+  UPDATE_PROFILE: "api/users/profile/update/",
 
-  // Products
-  PRODUCTS: "products/",
-  MY_ORDERS: "orders/myorders/",
-  CREATE_REVIEW: "products/",
-  TOP_PRODUCTS: "products/top/",
-  MY_PRODUCTS: "my_products/",
+  // Products (لاحظ إضافة api/ قبل كل مسار)
+  PRODUCTS: "api/products/",
+  MY_PRODUCTS: "api/my_products/",
+  TOP_PRODUCTS: "api/products/top/",
+  CREATE_PRODUCT: "api/create/",
+  DELETE_PRODUCT: "api/delete/", // يحتاج pk في الطلب
 
-  CREATE_PRODUCT: "create/",
-  DELETE_PRODUCT: "delete/",
+  // Orders
+  ORDERS_LIST: "api/orders/",
+  MY_ORDERS: "api/orders/myorders/",
+  CREATE_ORDER: "api/orders/add/",
+  ORDER_DETAILS: "api/orders/", // يحتاج pk
 
-  CREATE_ORDER: "orders/add/",
-  ORDER_DETAILS: "orders/",
-  PAY_ORDER: "orders/",
+  // Cart & Wishlist (دي اللي كانت مسببة الخطأ في الصورة)
+  CART: "api/cart/",
+  WISHLIST: "api/wishlist/",
 };
 
 // دالة مساعدة (ممكن تحتاجها في الـ Login)
