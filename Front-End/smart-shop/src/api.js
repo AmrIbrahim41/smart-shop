@@ -23,15 +23,15 @@ api.interceptors.request.use(
 
 export const ENDPOINTS = {
   // Auth
-  LOGIN: "users/login/",
-  REGISTER: "users/register/",
+  LOGIN: "api/users/login/",
+  REGISTER: "api/users/register/",
   REFRESH: "users/token/refresh/",
   UPDATE_PROFILE: "users/profile/update/",
   //   Users & Orders
   ORDERS_LIST: "orders/",
   USERS_LIST: "users/",
   DELIVER_ORDER: "orders/",
-  UPDATE_PROFILE: "users/profile/update/", 
+  UPDATE_PROFILE: "users/profile/update/",
 
   // Products
   PRODUCTS: "products/",
@@ -39,7 +39,6 @@ export const ENDPOINTS = {
   CREATE_REVIEW: "products/",
   TOP_PRODUCTS: "products/top/",
   MY_PRODUCTS: "my_products/",
-
 
   CREATE_PRODUCT: "create/",
   DELETE_PRODUCT: "delete/",
