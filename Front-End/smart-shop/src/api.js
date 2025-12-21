@@ -28,21 +28,21 @@ export const ENDPOINTS = {
   REFRESH: "api/users/token/refresh/",
   UPDATE_PROFILE: "api/users/profile/update/",
 
-  // Products (لاحظ إضافة api/ قبل كل مسار)
+  // Products
   PRODUCTS: "api/products/",
   MY_PRODUCTS: "api/my_products/",
   TOP_PRODUCTS: "api/products/top/",
-  CREATE_PRODUCT: "api/create/",
-  DELETE_PRODUCT: "api/delete/", // يحتاج pk في الطلب
+  CREATE_PRODUCT: "api/create/", // ده رابط الرفع اللي هيتصلح
+  DELETE_PRODUCT: "api/delete/", 
 
   // Orders
   ORDERS_LIST: "api/orders/",
   MY_ORDERS: "api/orders/myorders/",
   CREATE_ORDER: "api/orders/add/",
-  ORDER_DETAILS: "api/orders/", // يحتاج pk
+  ORDER_DETAILS: "api/orders/",
 
-  // Cart & Wishlist (دي اللي كانت مسببة الخطأ في الصورة)
-  CART: "api/cart/",
+  // Cart & Wishlist (دول اللي طالعين أحمر في الصورة عندك)
+  CART: "api/cart/", 
   WISHLIST: "api/wishlist/",
 };
 
