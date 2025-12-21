@@ -103,6 +103,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
      "http://localhost:5173",
      "http://127.0.0.1:5173",
+     "https://smart-shop0.netlify.app/"
  ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -124,3 +125,7 @@ EMAIL_HOST_PASSWORD = 'wgvt zlhh vklo xedi' # مش الباسورد العادي
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
+
+
