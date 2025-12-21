@@ -27,13 +27,15 @@ export const ENDPOINTS = {
   REGISTER: "api/users/register/",
   REFRESH: "api/users/token/refresh/",
   UPDATE_PROFILE: "api/users/profile/update/",
+  // أضف هذا السطر أو عدله داخل ENDPOINTS
+  UPDATE_PRODUCT: "api/products/update/",
 
   // Products
   PRODUCTS: "api/products/",
   MY_PRODUCTS: "api/my_products/",
   TOP_PRODUCTS: "api/products/top/",
   CREATE_PRODUCT: "api/create/", // ده رابط الرفع اللي هيتصلح
-  DELETE_PRODUCT: "api/delete/", 
+  DELETE_PRODUCT: "api/delete/",
 
   // Orders
   ORDERS_LIST: "api/orders/",
@@ -42,7 +44,7 @@ export const ENDPOINTS = {
   ORDER_DETAILS: "api/orders/",
 
   // Cart & Wishlist (دول اللي طالعين أحمر في الصورة عندك)
-  CART: "api/cart/", 
+  CART: "api/cart/",
   WISHLIST: "api/wishlist/",
 };
 

@@ -17,14 +17,14 @@ const ProductEditScreen = () => {
     const [name, setName] = useState('');
     const [price, setPrice] = useState(0);
     const [discountPrice, setDiscountPrice] = useState(0);
-    
+
     // 1. الصورة الأساسية
-    const [image, setImage] = useState('');      
-    const [preview, setPreview] = useState('');  
+    const [image, setImage] = useState('');
+    const [preview, setPreview] = useState('');
 
     // 2. صور المعرض الجديدة (للمعاينة والرفع)
-    const [subImages, setSubImages] = useState([]); 
-    const [subImagesPreview, setSubImagesPreview] = useState([]); 
+    const [subImages, setSubImages] = useState([]);
+    const [subImagesPreview, setSubImagesPreview] = useState([]);
 
     // 3. صور المعرض القديمة (القادمة من الداتابيز)
     const [oldImages, setOldImages] = useState([]);
@@ -32,9 +32,9 @@ const ProductEditScreen = () => {
     const [brand, setBrand] = useState('');
     const [countInStock, setCountInStock] = useState(0);
     const [category, setCategory] = useState('');
-    const [categoriesList, setCategoriesList] = useState([]); 
+    const [categoriesList, setCategoriesList] = useState([]);
     const [description, setDescription] = useState('');
-    const [approvalStatus, setApprovalStatus] = useState('pending'); 
+    const [approvalStatus, setApprovalStatus] = useState('pending');
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -45,7 +45,7 @@ const ProductEditScreen = () => {
         if (typeof imgPath === 'string' && imgPath.startsWith('http')) {
             return imgPath;
         }
-        return `http://127.0.0.1:8000${imgPath}`; 
+        return `https://Amr41.pythonanywhere.com${imgPath}`;
     };
 
     const fetchData = async () => {
@@ -62,33 +62,33 @@ const ProductEditScreen = () => {
 
             // جلب المنتج
             const { data } = await api.get(`${ENDPOINTS.PRODUCTS}${id}/`);
-            
+
             setName(data.name);
             setPrice(data.price);
             setDiscountPrice(data.discount_price || 0);
-            
+
             // الصورة الأساسية
-            setImage(data.image); 
+            setImage(data.image);
             setPreview(getImageUrl(data.image)); // هنا بنستخدم الدالة المساعدة
 
             setOldImages(data.images || []);
             setBrand(data.brand);
             setCountInStock(data.countInStock);
-            
+
             // التعامل مع القسم (لو جاي كـ Object بناخد الـ ID)
             if (data.category && typeof data.category === 'object') {
                 setCategory(data.category.id);
             } else {
-                setCategory(data.category || ''); 
+                setCategory(data.category || '');
             }
-            
+
             setDescription(data.description);
-            setApprovalStatus(data.approval_status); 
-            
+            setApprovalStatus(data.approval_status);
+
         } catch (err) {
             console.error("Error fetching product:", err);
-            setError(err.response && err.response.status === 404 
-                ? "Product not found (404)" 
+            setError(err.response && err.response.status === 404
+                ? "Product not found (404)"
                 : "Could not load data.");
         } finally {
             // 👇 مهم جداً: إيقاف التحميل في كل الأحوال
@@ -104,16 +104,16 @@ const ProductEditScreen = () => {
         const file = e.target.files[0];
         if (file) {
             setImage(file);
-            setPreview(URL.createObjectURL(file)); 
+            setPreview(URL.createObjectURL(file));
         }
     };
 
     const uploadSubImagesHandler = (e) => {
-        const files = Array.from(e.target.files); 
+        const files = Array.from(e.target.files);
         setSubImages(prev => [...prev, ...files]);
         const newPreviews = files.map(file => URL.createObjectURL(file));
         setSubImagesPreview(prev => [...prev, ...newPreviews]);
-        e.target.value = ''; 
+        e.target.value = '';
     };
 
     const removeSubImage = (index) => {
@@ -124,7 +124,7 @@ const ProductEditScreen = () => {
     const deleteOldImageHandler = async (imageId) => {
         if (window.confirm(t('confirmDeleteImage') || "Delete this image?")) {
             try {
-                await api.delete(`products/delete-image/${imageId}/`); 
+                await api.delete(`products/delete-image/${imageId}/`);
                 setOldImages(prev => prev.filter(img => img.id !== imageId));
                 alert("Image Deleted");
             } catch (error) {
@@ -136,15 +136,15 @@ const ProductEditScreen = () => {
     const submitHandler = async (e) => {
         e.preventDefault();
         const formData = new FormData();
-        
+
         formData.append('name', name);
         formData.append('price', price);
         formData.append('discount_price', discountPrice);
         formData.append('brand', brand);
         formData.append('countInStock', countInStock);
         formData.append('description', description);
-        formData.append('category', category); 
-        
+        formData.append('category', category);
+
         if (isAdmin) {
             formData.append('approval_status', approvalStatus);
         }
@@ -155,7 +155,7 @@ const ProductEditScreen = () => {
 
         if (subImages.length > 0) {
             subImages.forEach(file => {
-                formData.append('images', file); 
+                formData.append('images', file);
             });
         }
 
@@ -167,14 +167,15 @@ const ProductEditScreen = () => {
                 }
             };
 
-            const { data } = await api.put(`products/update/${id}/`, formData, config);
-            
+            // 👇 غير السطر ده في الـ submitHandler
+            const { data } = await api.put(`${ENDPOINTS.UPDATE_PRODUCT}${id}/`, formData, config);
+
             alert(t('productUpdated') || 'Product Updated Successfully! ✅');
-            
+
             // تحديث الواجهة بالبيانات الجديدة فوراً
             setPreview(getImageUrl(data.image));
-            setImage(data.image); 
-            setOldImages(data.images || []); 
+            setImage(data.image);
+            setOldImages(data.images || []);
             setSubImages([]);
             setSubImagesPreview([]);
 
@@ -185,7 +186,7 @@ const ProductEditScreen = () => {
     };
 
     if (loading) return <div className="min-h-screen pt-40 text-center bg-dark text-white font-bold animate-pulse">Loading Product Data...</div>;
-    
+
     if (error) return (
         <div className="min-h-screen pt-40 text-center bg-dark text-red-500">
             <h2 className="text-2xl font-bold mb-4">Error</h2>
@@ -198,16 +199,16 @@ const ProductEditScreen = () => {
         <div className="min-h-screen bg-gray-50 dark:bg-dark pt-28 pb-10 px-6 transition-colors duration-300">
             <Meta title={t('editProduct') || "Edit Product"} />
             <div className="max-w-6xl mx-auto">
-                
+
                 <Link to={goBackLink} className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white mb-6 transition font-bold">
                     <FaArrowLeft /> {t('goBack') || "GO BACK"}
                 </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
+
                     {/* العمود الأيسر: الصور */}
                     <div className="space-y-6">
-                        
+
                         {/* 1. الصورة الأساسية */}
                         <div className="bg-white dark:bg-dark-accent p-6 rounded-3xl border border-gray-200 dark:border-white/10 shadow-lg dark:shadow-none text-center">
                             <label className="block text-gray-500 dark:text-gray-400 text-sm font-bold mb-4 uppercase tracking-wider">{t('mainImage') || "Main Image"}</label>
@@ -229,12 +230,12 @@ const ProductEditScreen = () => {
                             <label className="block text-gray-500 dark:text-gray-400 text-sm font-bold mb-4 uppercase tracking-wider flex items-center justify-center gap-2">
                                 <FaImages /> {t('galleryImages') || "Gallery Images"}
                             </label>
-                            
+
                             <div className="grid grid-cols-3 gap-2 mb-4">
                                 {oldImages.map((img) => (
                                     <div key={img.id} className="h-20 rounded-lg overflow-hidden border border-green-500/50 relative group shadow-sm">
                                         <img src={getImageUrl(img.image)} alt="Old" className="w-full h-full object-cover" />
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => deleteOldImageHandler(img.id)}
                                             className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition shadow-md z-10"
@@ -254,7 +255,7 @@ const ProductEditScreen = () => {
                                         <div className="absolute bottom-0 w-full bg-yellow-600/80 text-[8px] text-white text-center">NEW</div>
                                     </div>
                                 ))}
-                                
+
                                 <div className="h-20 rounded-lg border-2 border-dashed border-gray-300 dark:border-white/20 flex items-center justify-center cursor-pointer hover:border-primary hover:text-primary text-gray-400 dark:text-gray-500 transition relative">
                                     <span className="text-2xl font-bold">+</span>
                                     <input type="file" multiple onChange={uploadSubImagesHandler} className="absolute inset-0 opacity-0 cursor-pointer" />
