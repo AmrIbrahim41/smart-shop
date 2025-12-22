@@ -59,7 +59,8 @@ def registerUser(request):
         # ... (باقي كود إرسال الإيميل زي ما هو بالظبط) ...
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        activation_link = f"http://localhost:5173/activate/{uid}/{token}/"
+        # activation_link = f"http://localhost:5173/activate/{uid}/{token}/"
+        activation_link = f"https://smart-shop00.netlify.app/activate/{uid}/{token}/"
         message = f"Hi {user.first_name},\n\nPlease click the link below to activate your account:\n{activation_link}\n\nThanks,\nSmartShop Team"
 
         send_mail(
