@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-)@s7^6a%s2@u*$+7jnaxkj11+fi5z9k3h2vriql7!s*g4r9pbr"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 # Application definition
@@ -106,7 +106,6 @@ CORS_ALLOWED_ORIGINS = [
      "http://localhost:5173",
      "http://127.0.0.1:5173",
      "https://smart-shop00.netlify.app/"
-     "https://smart-shop0.netlify.app"
  ]
 CORS_ALLOW_CREDENTIALS = True
 
