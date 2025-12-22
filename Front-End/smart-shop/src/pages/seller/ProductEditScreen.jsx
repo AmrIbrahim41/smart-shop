@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { apiService, getImageUrl } from '../../api'; 
-import { FaArrowLeft, FaSave, FaCloudUploadAlt, FaTrash, FaTimes, FaBoxOpen } from 'react-icons/fa';
+import { useParams, useNavigate } from 'react-router-dom';
+import { apiService, getImageUrl } from '../../api';
+import { FaArrowLeft, FaSave, FaCloudUploadAlt, FaTrash, FaTimes, FaBoxOpen, FaMagic, FaTag, FaDollarSign, FaLayerGroup, FaImage } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
 
@@ -12,10 +12,9 @@ const ProductEditScreen = () => {
 
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
     const isAdmin = userInfo?.isAdmin;
-    // توجيه المستخدم حسب صلاحيته
     const goBackLink = isAdmin ? "/admin/productlist" : "/dashboard";
 
-    // --- State Variables (نفس المنطق البرمجي) ---
+    // --- State Variables ---
     const [name, setName] = useState('');
     const [price, setPrice] = useState(0);
     const [discountPrice, setDiscountPrice] = useState(0);
@@ -30,37 +29,33 @@ const ProductEditScreen = () => {
     const [categoriesList, setCategoriesList] = useState([]);
     const [description, setDescription] = useState('');
     const [approvalStatus, setApprovalStatus] = useState('pending');
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [saveLoading, setSaveLoading] = useState(false); // Loading state for save button specifically
 
     // --- Fetch Data ---
     const fetchData = async () => {
-        if (!id) {
-             // لو إنشاء منتج جديد، بنحمل الأقسام بس
-             const { data: categories } = await apiService.getCategories();
-             setCategoriesList(categories);
-             setLoading(false);
-             return;
-        }
         try {
             const { data: categories } = await apiService.getCategories();
             setCategoriesList(categories);
 
-            const { data } = await apiService.getProductDetails(id);
-
-            setName(data.name);
-            setPrice(data.price);
-            setDiscountPrice(data.discount_price || 0);
-            setImage(data.image);
-            setPreview(getImageUrl(data.image));
-            setOldImages(data.images || []);
-            setBrand(data.brand);
-            setCountInStock(data.countInStock);
-            setCategory(data.category?.id || data.category || '');
-            setDescription(data.description);
-            setApprovalStatus(data.approval_status);
+            if (id) {
+                const { data } = await apiService.getProductDetails(id);
+                setName(data.name);
+                setPrice(data.price);
+                setDiscountPrice(data.discount_price || 0);
+                setImage(data.image);
+                setPreview(getImageUrl(data.image));
+                setOldImages(data.images || []);
+                setBrand(data.brand);
+                setCountInStock(data.countInStock);
+                setCategory(data.category?.id || data.category || '');
+                setDescription(data.description);
+                setApprovalStatus(data.approval_status);
+            }
         } catch (err) {
-            setError("Failed to load product data");
+            setError("Failed to load data");
         } finally {
             setLoading(false);
         }
@@ -105,6 +100,8 @@ const ProductEditScreen = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
+        setSaveLoading(true);
+
         const formData = new FormData();
         formData.append('name', name);
         formData.append('price', price);
@@ -121,249 +118,277 @@ const ProductEditScreen = () => {
         }
 
         try {
-            setLoading(true);
             let response;
             if (id) {
                 response = await apiService.updateProduct(id, formData);
-                alert(t('productUpdated') || 'Updated Successfully!');
+                // alert(t('productUpdated') || 'Updated Successfully!');
             } else {
                 response = await apiService.createProduct(formData);
-                alert(t('productCreated') || 'Created Successfully!');
+                // alert(t('productCreated') || 'Created Successfully!');
                 navigate(goBackLink);
+                return; // Exit to avoid trying to use 'response' for update logic on navigation
             }
-            // Refresh Data
+
+            // Refresh Data in place (Smooth UX)
             const { data } = response;
             setImage(data.image);
             setPreview(getImageUrl(data.image));
             setOldImages(data.images || []);
             setSubImages([]);
             setSubImagesPreview([]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
         } catch (error) {
             alert(error.response?.data?.detail || 'Error saving product');
         } finally {
-            setLoading(false);
+            setSaveLoading(false);
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-primary font-bold text-xl animate-pulse">Loading...</div>;
+    if (loading) return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400 font-bold animate-pulse">Loading Workspace...</p>
+        </div>
+    );
 
     if (error) return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-8 rounded-3xl text-center max-w-md border border-red-200 dark:border-red-800">
-                <FaBoxOpen size={50} className="mx-auto mb-4 opacity-50"/>
-                <h2 className="text-2xl font-bold mb-2">Oops! Something went wrong</h2>
-                <p className="mb-6">{error}</p>
-                <button onClick={() => navigate(goBackLink)} className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition w-full font-bold">
-                    Go Back
-                </button>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+            <div className="text-center">
+                <FaBoxOpen className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Something went wrong</h2>
+                <p className="text-gray-500 mb-6">{error}</p>
+                <button onClick={() => navigate(goBackLink)} className="px-6 py-2 bg-primary text-white rounded-full hover:bg-orange-600 transition">Return Back</button>
             </div>
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+        <div className="min-h-screen pt-28 pb-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-500 ease-in-out">
             <Meta title={id ? t('editProduct') : t('createProduct')} />
 
-            {/* Container */}
-            <div className="max-w-7xl mx-auto">
-                
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-black text-gray-900 dark:text-white">
-                            {id ? (t('editProduct') || "Edit Product") : (t('createProduct') || "New Product")}
-                        </h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
-                            {id ? "Update your product details and images." : "Add a new product to your inventory."}
-                        </p>
-                    </div>
-                    <button 
-                        onClick={() => navigate(goBackLink)}
-                        className="group flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-primary bg-white dark:bg-gray-800 px-5 py-3 rounded-2xl shadow-sm hover:shadow-md transition-all border border-gray-200 dark:border-gray-700"
-                    >
-                        <FaArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
-                        <span className="font-bold">{t('goBack') || "Cancel"}</span>
-                    </button>
+            {/* Header Section */}
+            <div className="max-w-7xl mx-auto px-6 mb-10 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-down">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+                        {id ? <FaMagic className="text-primary" /> : <FaBoxOpen className="text-primary" />}
+                        {id ? (t('editProduct') || "Edit Product") : (t('createProduct') || "New Product")}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
+                        {id ? "Refine your product details to perfection." : "Bring a new item to your collection."}
+                    </p>
                 </div>
 
-                <form onSubmit={submitHandler} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    {/* === Left Column: Main Image === */}
-                    <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-gray-700 sticky top-24">
-                            <label className="block text-gray-700 dark:text-white font-bold mb-4 text-lg">{t('mainImage') || "Product Image"}</label>
-                            
-                            <div className="relative group w-full aspect-[4/5] bg-gray-50 dark:bg-gray-700/50 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary transition-all overflow-hidden flex flex-col items-center justify-center cursor-pointer">
-                                <img
-                                    src={preview || getImageUrl(image)}
-                                    alt="Preview"
-                                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-40"
-                                    onError={(e) => e.target.src = '/images/placeholder.png'}
-                                />
-                                <div className="z-10 flex flex-col items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform group-hover:scale-110">
-                                    <div className="bg-primary text-white p-4 rounded-full shadow-lg mb-3">
-                                        <FaCloudUploadAlt size={30} />
-                                    </div>
-                                    <span className="text-gray-700 dark:text-white font-bold">{t('changeImage') || "Click to Upload"}</span>
-                                </div>
-                                <input type="file" onChange={uploadFileHandler} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                            </div>
-                            <p className="text-xs text-center text-gray-400 mt-4">Supported formats: JPG, PNG, WEBP</p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => navigate(goBackLink)}
+                        className="px-6 py-3 rounded-2xl font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+                    >
+                        <FaArrowLeft /> {t('cancel') || "Cancel"}
+                    </button>
+                    {/* Sticky Save Button for Mobile */}
+                    <button
+                        onClick={submitHandler}
+                        disabled={saveLoading}
+                        className="px-8 py-3 rounded-2xl font-bold text-white bg-gradient-to-r from-primary to-orange-600 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {saveLoading ? <span className="animate-pulse">Saving...</span> : <><FaSave /> {t('saveChanges') || "Save Changes"}</>}
+                    </button>
+                </div>
+            </div>
+
+            <form onSubmit={submitHandler} className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                {/* === Left Column (Main Image & Gallery) === */}
+                <div className="lg:col-span-4 space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+
+                    {/* Main Image Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20 relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-orange-500"></div>
+                        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><FaImage className="text-primary" /> {t('mainImage') || "Main Image"}</h3>
+
+                        <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 group-hover:border-primary transition-colors bg-gray-50 dark:bg-gray-900/50">
+                            <img
+                                src={preview || getImageUrl(image)}
+                                alt="Main Preview"
+                                className="w-full h-full object-contain p-2 transition-transform duration-700 group-hover:scale-105"
+                                onError={(e) => e.target.src = '/images/placeholder.png'}
+                            />
+
+                            {/* Overlay */}
+                            <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-sm">
+                                <FaCloudUploadAlt className="text-white text-5xl mb-2 drop-shadow-md animate-bounce" />
+                                <span className="text-white font-bold bg-black/50 px-4 py-1 rounded-full text-sm">Click to Change</span>
+                                <input type="file" onChange={uploadFileHandler} className="hidden" />
+                            </label>
                         </div>
                     </div>
 
-                    {/* === Right Column: Form Fields === */}
-                    <div className="lg:col-span-2 space-y-8">
-                        
-                        {/* 1. Basic Info Card */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Basic Information</h3>
-                            
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('productName')}</label>
+                    {/* Gallery Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><FaLayerGroup className="text-primary" /> {t('gallery') || "Gallery"}</h3>
+
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* Old Images */}
+                            {oldImages.map((img) => (
+                                <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 dark:border-gray-700">
+                                    <img src={getImageUrl(img.image)} alt="Old" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => deleteOldImageHandler(img.id)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                        <FaTrash />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {/* New Previews */}
+                            {subImagesPreview.map((url, index) => (
+                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border-2 border-primary/50">
+                                    <img src={url} alt="New" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => removeSubImage(index)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                        <FaTimes />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {/* Add Button */}
+                            <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all flex flex-col items-center justify-center text-gray-400 hover:text-primary">
+                                <FaCloudUploadAlt className="text-2xl mb-1" />
+                                <span className="text-[10px] font-bold uppercase">Add</span>
+                                <input type="file" multiple onChange={uploadSubImagesHandler} className="hidden" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {/* === Right Column (Form Details) === */}
+                <div className="lg:col-span-8 space-y-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+
+                    {/* General Info */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Product Information</h2>
+
+                        <div className="grid gap-6">
+                            {/* Name */}
+                            <div className="relative group">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('productName') || "Product Name"}</label>
+                                <div className="relative">
+                                    <FaTag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                                     <input
                                         type="text"
-                                        placeholder="e.g. Wireless Headphones"
-                                        className="w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white placeholder-gray-400"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                        placeholder="e.g. Modern Leather Sofa"
                                         required
                                     />
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('price')}</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                                            <input
-                                                type="number"
-                                                className="w-full pl-8 px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white"
-                                                value={price}
-                                                onChange={(e) => setPrice(e.target.value)}
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-bold text-red-500 mb-2">{t('discountPrice')}</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-red-300">$</span>
-                                            <input
-                                                type="number"
-                                                className="w-full pl-8 px-5 py-4 rounded-xl bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 outline-none transition text-red-600 dark:text-red-400 placeholder-red-300"
-                                                value={discountPrice}
-                                                onChange={(e) => setDiscountPrice(e.target.value)}
-                                            />
-                                        </div>
+                            {/* Price & Discount Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="relative group">
+                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('price') || "Price"}</label>
+                                    <div className="relative">
+                                        <FaDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        <input
+                                            type="number"
+                                            value={price}
+                                            onChange={(e) => setPrice(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                            required
+                                        />
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('description')}</label>
-                                    <textarea
-                                        rows="5"
-                                        className="w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white placeholder-gray-400"
-                                        placeholder="Describe your product..."
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                    ></textarea>
+                                <div className="relative group">
+                                    <label className="text-xs font-bold text-red-500/80 uppercase tracking-wider mb-2 block">{t('discountPrice') || "Sale Price"}</label>
+                                    <div className="relative">
+                                        <FaDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400 group-focus-within:text-red-500 transition-colors" />
+                                        <input
+                                            type="number"
+                                            value={discountPrice}
+                                            onChange={(e) => setDiscountPrice(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all text-red-600 dark:text-red-400 font-bold placeholder-red-200"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 2. Details Card */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Product Details</h3>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('category')}</label>
-                                    <select 
-                                        className="w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white cursor-pointer appearance-none"
-                                        value={category} 
-                                        onChange={(e) => setCategory(e.target.value)} 
+                            {/* Description */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('description') || "Description"}</label>
+                                <textarea
+                                    rows="4"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white resize-none"
+                                    placeholder="Tell your customers about this product..."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Categorization & Stock */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Inventory & Sorting</h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('category') || "Category"}</label>
+                                <div className="relative">
+                                    <select
+                                        value={category}
+                                        onChange={(e) => setCategory(e.target.value)}
+                                        className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold cursor-pointer appearance-none"
                                         required
                                     >
-                                        <option value="">Select Category...</option>
+                                        <option value="">Select...</option>
                                         {categoriesList.map((cat) => (
                                             <option key={cat.id} value={cat.id}>{cat.name}</option>
                                         ))}
                                     </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('brand')}</label>
-                                    <input
-                                        type="text"
-                                        className="w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white"
-                                        value={brand}
-                                        onChange={(e) => setBrand(e.target.value)}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{t('stock')}</label>
-                                    <input
-                                        type="number"
-                                        className="w-full px-5 py-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition text-gray-900 dark:text-white"
-                                        value={countInStock}
-                                        onChange={(e) => setCountInStock(e.target.value)}
-                                        required
-                                    />
-                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('brand') || "Brand"}</label>
+                                <input
+                                    type="text"
+                                    value={brand}
+                                    onChange={(e) => setBrand(e.target.value)}
+                                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('stock') || "Stock"}</label>
+                                <input
+                                    type="number"
+                                    value={countInStock}
+                                    onChange={(e) => setCountInStock(e.target.value)}
+                                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                    required
+                                />
                             </div>
                         </div>
-
-                        {/* 3. Gallery Card */}
-                        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700">
-                            <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Image Gallery</h3>
-                                <label className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-white px-4 py-2 rounded-lg cursor-pointer transition flex items-center gap-2 font-bold text-sm">
-                                    <FaCloudUploadAlt /> Add Images
-                                    <input type="file" multiple onChange={uploadSubImagesHandler} hidden />
-                                </label>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {/* Existing Images */}
-                                {oldImages.map((img) => (
-                                    <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group">
-                                        <img src={getImageUrl(img.image)} alt="gallery" className="w-full h-full object-cover" />
-                                        <button type="button" onClick={() => deleteOldImageHandler(img.id)} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
-                                            <FaTrash size={20} className="hover:text-red-500 transition-colors" />
-                                        </button>
-                                    </div>
-                                ))}
-                                {/* New Uploads Preview */}
-                                {subImagesPreview.map((url, index) => (
-                                    <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border-2 border-green-500/50">
-                                        <img src={url} alt="new-gallery" className="w-full h-full object-cover" />
-                                        <button type="button" onClick={() => removeSubImage(index)} className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
-                                            <FaTimes size={20} className="hover:text-red-500 transition-colors" />
-                                        </button>
-                                    </div>
-                                ))}
-                                {/* Empty State if no images */}
-                                {oldImages.length === 0 && subImagesPreview.length === 0 && (
-                                    <div className="col-span-full py-8 text-center text-gray-400 italic">
-                                        No additional images uploaded.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Submit Button */}
-                        <button 
-                            type="submit" 
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-primary to-orange-600 hover:from-orange-600 hover:to-primary text-white font-bold py-5 rounded-2xl shadow-lg hover:shadow-orange-500/30 transform hover:-translate-y-1 transition-all duration-300 text-lg flex items-center justify-center gap-3"
-                        >
-                            {loading ? "Processing..." : <><FaSave size={20} /> {id ? "Update Product" : "Publish Product"}</>}
-                        </button>
-
                     </div>
-                </form>
-            </div>
+
+                </div>
+            </form>
+
+            {/* CSS Animation Styles (Inline for simplicity) */}
+            <style>{`
+                @keyframes fadeInDown {
+                    from { opacity: 0; transform: translateY(-20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in-down { animation: fadeInDown 0.6s ease-out forwards; }
+                .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
+            `}</style>
         </div>
     );
 };
