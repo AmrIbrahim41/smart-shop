@@ -12,13 +12,13 @@ const RegisterScreen = () => {
     // 👇 1. تقسيم الاسم لمتغيرين
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    
+
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [type, setType] = useState('customer');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    
+
     const [message, setMessage] = useState(null);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -30,58 +30,47 @@ const RegisterScreen = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
-        
         if (password !== confirmPassword) {
-            setError(t('passwordsDoNotMatch') || 'Passwords do not match');
+            setError('كلمات المرور غير متطابقة');
             return;
         }
-        
-        setLoading(true);
-        setError(null);
 
         try {
-            const config = { headers: { 'Content-Type': 'application/json' } };
-            
-            // 👇 2. إرسال الاسم الأول والأخير منفصلين
-            const { data } = await axios.post(
-                'https://Amr41.pythonanywhere.com/api/users/register/',
-                { 
-                    first_name: firstName, 
-                    last_name: lastName, 
-                    email, 
-                    password, 
-                    phone, 
-                    type 
-                },
-                config
-            );
+            setLoading(true);
+            // إرسال البيانات للباك إند
+            const { data } = await api.post('/api/users/register/', {
+                'first_name': firstName, // 👈 تأكد من تطابق الأسماء مع الباك إند
+                'last_name': lastName,
+                'email': email,
+                'password': password,
+                'phone': phone,
+                'type': type
+            });
 
-            setMessage(t('registrationSuccess') || "Registration successful! Please check your email to activate account.");
-            
-            // تفريغ الحقول
-            setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setConfirmPassword(''); setPhone('');
-            
+            setMessage(data.details); // رسالة نجاح (افحص بريدك)
+            setLoading(false);
         } catch (err) {
-            setError(err.response?.data?.detail || err.response?.data?.message || t('registrationError') || 'Registration Error');
+            setError(err.response && err.response.data.detail
+                ? err.response.data.detail
+                : err.message);
+            setLoading(false);
         }
-        setLoading(false);
     };
-
     return (
         <div className="min-h-screen pt-28 px-6 bg-gray-50 dark:bg-dark flex justify-center transition-colors duration-300">
             <Meta title={t('registerTitle') || "Register"} />
-            
+
             <div className="w-full max-w-md">
                 <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-6 uppercase text-center transition-colors">
                     {t('registerTitle') || "REGISTER"}
                 </h1>
-                
+
                 {error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-4 rounded-xl mb-4 text-center dark:border-red-500/20 animate-pulse transition-colors">
                         {error}
                     </div>
                 )}
-                
+
                 {message && (
                     <div className="bg-green-100 border border-green-400 text-green-700 dark:bg-green-500/10 dark:text-green-400 p-6 rounded-2xl mb-6 dark:border-green-500/30 text-center transition-colors">
                         <h3 className="font-bold text-xl mb-2">🎉 {t('successRegister') || "Almost there!"}</h3>
@@ -91,29 +80,29 @@ const RegisterScreen = () => {
 
                 {!message && (
                     <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent p-8 rounded-3xl border border-gray-200 dark:border-white/10 space-y-4 shadow-lg dark:shadow-none transition-colors duration-300">
-                        
+
                         {/* 👇 3. حقل الاسم مقسوم لجزئين */}
                         <div className="flex gap-3">
                             <div className="relative group w-1/2">
                                 <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="text" 
-                                    placeholder={t('firstName') || "First Name"} 
-                                    value={firstName} 
-                                    onChange={(e) => setFirstName(e.target.value)} 
-                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                    required 
+                                <input
+                                    type="text"
+                                    placeholder={t('firstName') || "First Name"}
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                    required
                                 />
                             </div>
                             <div className="relative group w-1/2">
                                 <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                                <input 
-                                    type="text" 
-                                    placeholder={t('lastName') || "Last Name"} 
-                                    value={lastName} 
-                                    onChange={(e) => setLastName(e.target.value)} 
-                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                    required 
+                                <input
+                                    type="text"
+                                    placeholder={t('lastName') || "Last Name"}
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                    required
                                 />
                             </div>
                         </div>
@@ -121,36 +110,36 @@ const RegisterScreen = () => {
                         {/* Phone Input */}
                         <div className="relative group">
                             <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="text" 
-                                placeholder={t('phonePlaceholder') || "Phone Number"} 
-                                value={phone} 
-                                onChange={(e) => setPhone(e.target.value)} 
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                required 
+                            <input
+                                type="text"
+                                placeholder={t('phonePlaceholder') || "Phone Number"}
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                required
                             />
                         </div>
 
                         {/* Email Input */}
                         <div className="relative group">
                             <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="email" 
-                                placeholder={t('emailPlaceholder') || "Email Address"} 
-                                value={email} 
-                                onChange={(e) => setEmail(e.target.value)} 
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                required 
+                            <input
+                                type="email"
+                                placeholder={t('emailPlaceholder') || "Email Address"}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                required
                             />
                         </div>
-                        
+
                         {/* Account Type Selector */}
                         <div className="flex gap-4 items-center bg-gray-50 dark:bg-dark p-3 rounded-xl border border-gray-300 dark:border-white/10 transition-colors">
                             <FaUserTag className="text-gray-400 dark:text-gray-500" />
                             <label className="text-gray-600 dark:text-gray-400 text-sm font-bold whitespace-nowrap">{t('iAmA') || "I am a"}:</label>
-                            <select 
-                                value={type} 
-                                onChange={(e) => setType(e.target.value)} 
+                            <select
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
                                 className="bg-transparent text-gray-900 dark:text-white outline-none flex-1 cursor-pointer font-bold"
                             >
                                 <option value="customer" className="bg-white dark:bg-dark text-gray-900 dark:text-white">{t('buyer') || "Buyer (Customer)"}</option>
@@ -161,33 +150,33 @@ const RegisterScreen = () => {
                         {/* Password Input */}
                         <div className="relative group">
                             <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="password" 
-                                placeholder={t('passwordPlaceholder') || "Password"} 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                required 
+                            <input
+                                type="password"
+                                placeholder={t('passwordPlaceholder') || "Password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                required
                             />
                         </div>
 
                         {/* Confirm Password Input */}
                         <div className="relative group">
                             <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="password" 
-                                placeholder={t('confirmPasswordPlaceholder') || "Confirm Password"} 
-                                value={confirmPassword} 
-                                onChange={(e) => setConfirmPassword(e.target.value)} 
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                required 
+                            <input
+                                type="password"
+                                placeholder={t('confirmPasswordPlaceholder') || "Confirm Password"}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+                                required
                             />
                         </div>
-                        
+
                         {/* Register Button */}
-                        <button 
-                            type="submit" 
-                            disabled={loading} 
+                        <button
+                            type="submit"
+                            disabled={loading}
                             className="w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase"
                         >
                             {loading ? (t('processing') || 'Processing...') : (t('registerBtn') || 'REGISTER')}

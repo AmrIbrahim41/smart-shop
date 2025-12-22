@@ -31,81 +31,54 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 
-# 👇👇 1. تعديل دالة التسجيل (تفعيل عبر الإيميل) 👇👇
-@api_view(["POST"])
+@api_view(['POST'])
 def registerUser(request):
     data = request.data
     try:
-        if User.objects.filter(email=data["email"]).exists():
+        # 1. التأكد أن الإيميل غير مستخدم مسبقاً
+        if User.objects.filter(email=data['email']).exists():
             return Response(
-                {"detail": "User with this email already exists"},
-                status=status.HTTP_400_BAD_REQUEST,
+                {'detail': 'هذا البريد الإلكتروني مسجل بالفعل'},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
+        # 2. إنشاء المستخدم وجعل الـ username هو الـ email
         user = User.objects.create(
-            # 👇 التعديل هنا: استقبال الاسم الأول والأخير منفصلين
-            first_name=data.get("first_name", ""),
-            last_name=data.get("last_name", ""),
-            username=data["email"],
-            email=data["email"],
-            password=make_password(data["password"]),
-            is_active=False,
+            first_name=data.get('first_name', ''),
+            last_name=data.get('last_name', ''),
+            username=data['email'],  # 👈 هنا السر: اليوزرنيم = الإيميل
+            email=data['email'],
+            password=make_password(data['password']),
+            is_active=False, # الحساب غير نشط حتى يتم تفعيل الإيميل
         )
 
-        user.profile.phone = data.get("phone", "")
-        user.profile.type = data.get("type", "customer")
-        user.profile.save()
+        # 3. تحديث بيانات البروفايل الإضافية (موبايل، نوع الحساب)
+        # ملاحظة: بروفايل اليوزر يتم إنشاؤه تلقائياً عبر الـ signals في models.py
+        profile = user.profile
+        profile.phone = data.get('phone', '')
+        profile.type = data.get('type', 'customer')
+        profile.save()
 
-        # ... (باقي كود إرسال الإيميل زي ما هو بالظبط) ...
+        # 4. كود إرسال إيميل التفعيل (كما هو في ملفك)
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        # activation_link = f"http://localhost:5173/activate/{uid}/{token}/"
+        
+        # رابط التفعيل (تأكد من وضع رابط نتفلاي الصحيح هنا)
         activation_link = f"https://smart-shop00.netlify.app/activate/{uid}/{token}/"
-        message = f"Hi {user.first_name},\n\nPlease click the link below to activate your account:\n{activation_link}\n\nThanks,\nSmartShop Team"
-
-        send_mail(
-            "Activate your Account",
-            message,
-            settings.EMAIL_HOST_USER,
-            [user.email],
-            fail_silently=False,
-        )
+        
+        subject = 'تفعيل حسابك - Smart Shop'
+        message = f'أهلاً بك، يرجى الضغط على الرابط التالي لتفعيل حسابك: \n {activation_link}'
+        
+        send_mail(subject, message, settings.EMAIL_HOST_USER, [data['email']])
 
         return Response(
-            {"details": "Account created! Please check your email to activate it."},
-            status=status.HTTP_201_CREATED,
+            {'details': "account created successfully, please check your email to activate your account."},
+            status=status.HTTP_201_CREATED
         )
 
     except Exception as e:
-        message = {"detail": "User with this email already exists or invalid data"}
-        return Response(message, status=status.HTTP_400_BAD_REQUEST)
-
-
-# 👇👇 2. دالة التفعيل الجديدة 👇👇
-@api_view(["POST"])
-@permission_classes([AllowAny])
-@authentication_classes([])  # إلغاء فحص التوكن لأن اليوزر لسه مسجلش دخول
-def activateUser(request, uid, token):
-    try:
-        user_id = force_str(urlsafe_base64_decode(uid))
-        user = User.objects.get(pk=user_id)
-
-        if default_token_generator.check_token(user, token):
-            user.is_active = True
-            user.save()
-            return Response(
-                {"details": "Account activated successfully! You can login now."}
-            )
-        else:
-            return Response(
-                {"detail": "Invalid or expired token"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-    except Exception as e:
-        return Response(
-            {"detail": "Invalid token or user ID"}, status=status.HTTP_400_BAD_REQUEST
-        )
+        print(f"Error: {str(e)}") # عشان يظهرلك الخطأ في terminal السيرفر
+        return Response({'detail': 'account creation failed'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # 3. دالة جلب بروفايل المستخدم (كانت ناقصة في الكود اللي بعته، ضفتها للأمان)
