@@ -4,6 +4,7 @@ import axios from 'axios';
 import Meta from '../../components/tapheader/Meta';
 import { FaPhone, FaUserTag, FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
 import { useSettings } from '../../context/SettingsContext';
+import api from '../../api'; // 👈 ضيف السطر ده هنا
 
 const RegisterScreen = () => {
     const { t } = useSettings();
