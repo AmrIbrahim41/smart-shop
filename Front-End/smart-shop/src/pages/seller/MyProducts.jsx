@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api, { ENDPOINTS } from '../../api';
+// تعديل: استدعاء getImageUrl من ملف الـ API
+import api, { ENDPOINTS, getImageUrl } from '../../api';
 import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 1. Import
+import { useSettings } from '../../context/SettingsContext';
 
 const MyProducts = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { t } = useSettings(); // 2. Hook
+  const { t } = useSettings();
 
   useEffect(() => {
     const fetchMyProducts = async () => {
       try {
-        const response = await api.get(ENDPOINTS.MY_PRODUCTS);
-        setProducts(response.data);
+        // استخدام api بدلاً من axios المباشر لضمان إضافة التوكن
+        const { data } = await api.get(ENDPOINTS.MY_PRODUCTS);
+        setProducts(data);
       } catch (error) {
         console.error("Error fetching products", error);
       } finally {
@@ -28,6 +30,7 @@ const MyProducts = () => {
   const handleDelete = async (id) => {
     if (window.confirm(t('confirmDelete') || "Are you sure you want to delete this product?")) {
       try {
+        // الحذف باستخدام api instance
         await api.delete(`${ENDPOINTS.PRODUCTS}${id}/`);
         setProducts(products.filter(p => p.id !== id));
       } catch (error) {
@@ -72,25 +75,26 @@ const MyProducts = () => {
                 <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
                   <td className="p-4 flex items-center gap-3">
                     <img 
-                        src={product.main_image ? `http://127.0.0.1:8000${product.main_image}` : "https://via.placeholder.com/150"} 
+                        // تعديل: استخدام getImageUrl لضمان ظهور الصورة
+                        src={getImageUrl(product.main_image || product.image)} 
                         alt={product.name} 
                         className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-white/10" 
+                        onError={(e) => { e.target.src = '/images/placeholder.png'; }}
                     />
                     <span className="font-bold text-gray-900 dark:text-white">{product.name}</span>
                   </td>
                   <td className="p-4 font-bold text-primary">${product.price}</td>
-                  <td className="p-4 text-gray-900 dark:text-white">{product.countInStock || product.stock}</td> {/* Adjusted property name just in case */}
+                  <td className="p-4 text-gray-900 dark:text-white">{product.countInStock || product.stock}</td>
                   <td className="p-4">
                     <span className={`px-2 py-1 rounded text-xs font-bold ${
                         product.approval_status === 'approved' ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-500' : 
                         product.approval_status === 'rejected' ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-500' : 
                         'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-500'
                     }`}>
-                        {t(product.approval_status) || product.approval_status?.toUpperCase()}
+                        {t(product.approval_status) || product.approval_status?.toUpperCase() || 'PENDING'}
                     </span>
                   </td>
                   <td className="p-4 flex gap-3 text-lg">
-                    {/* Fixed Edit Link */}
                     <Link to={`/seller/product/${product.id}/edit`} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition">
                         <FaEdit />
                     </Link>

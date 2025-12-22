@@ -1,68 +1,87 @@
 import React from 'react';
-import { FaFacebookF, FaInstagram, FaPaperPlane } from 'react-icons/fa';
-import { links } from '../../api';
+import { Link } from 'react-router-dom';
+import { FaFacebook, FaInstagram, FaWhatsapp, FaHeart } from 'react-icons/fa';
+import { useSettings } from '../../context/SettingsContext';
+import { links } from '../../api'; // استدعاء روابط السوشيال ميديا من الملف المركزي
 
 const Footer = () => {
+  const { t } = useSettings();
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="bg-dark-accent border-t border-white/5 pt-20 pb-10 px-6 mt-auto">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          
-          {/* Brand Info */}
-          <div className="space-y-6">
-            <div className="text-3xl font-extrabold tracking-tighter text-primary">
-              SMART<span className="text-white">SHOP</span>
-            </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
-              Premium products and tech store. We are the gateway to the future of technology and style.
+    <footer className="bg-white dark:bg-dark-accent border-t border-gray-200 dark:border-white/5 pt-16 pb-8 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+
+          {/* 1. الشعار والوصف */}
+          <div className="col-span-1 md:col-span-1">
+            <Link to="/" className="text-3xl font-black tracking-tighter text-primary mb-4 block">
+              SMART<span className="text-gray-900 dark:text-white">SHOP</span>
+            </Link>
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
+              {t('footerDesc') || "Your one-stop shop for the best products. Quality guaranteed and fast shipping directly to your doorstep."}
             </p>
-            <div className="flex space-x-4 text-white">
-              <a href={links.facebook} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-primary transition">
-                <FaFacebookF />
+            <div className="flex gap-4">
+              <a href={links.facebook} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-white hover:bg-blue-600 hover:text-white transition">
+                <FaFacebook />
               </a>
-              <a href={links.instagram} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-primary transition">
+              <a href={links.instagram} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-white hover:bg-pink-600 hover:text-white transition">
                 <FaInstagram />
               </a>
+              <a href={links.whtasapp} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-600 dark:text-white hover:bg-green-600 hover:text-white transition">
+                <FaWhatsapp />
+              </a>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* 2. روابط سريعة */}
           <div>
-            <h4 className="text-white font-bold uppercase mb-6 border-b border-primary w-fit pb-2">Quick Links</h4>
-            <ul className="space-y-4 text-gray-400 text-sm">
-              <li><a href="/" className="hover:text-primary transition">Home</a></li>
-              <li><a href="/categories" className="hover:text-primary transition">Categories</a></li>
-              <li><a href="/shop" className="hover:text-primary transition">Shop</a></li>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">{t('quickLinks') || "Quick Links"}</h3>
+            <ul className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
+              <li><Link to="/" className="hover:text-primary transition">{t('home')}</Link></li>
+              <li><Link to="/cart" className="hover:text-primary transition">{t('cart')}</Link></li>
+              <li><Link to="/wishlist" className="hover:text-primary transition">{t('wishlist')}</Link></li>
+              <li><Link to="/login" className="hover:text-primary transition">{t('login')}</Link></li>
             </ul>
           </div>
 
-          {/* Support */}
+          {/* 3. خدمة العملاء */}
           <div>
-            <h4 className="text-white font-bold uppercase mb-6 border-b border-primary w-fit pb-2">Support</h4>
-            <ul className="space-y-4 text-gray-400 text-sm">
-              <li><a href="#" className="hover:text-primary transition">Privacy Policy</a></li>
-              <li><a href={links.whtasapp} className="hover:text-primary transition">Contact Us</a></li>
+            <h3 className="font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">{t('customerService') || "Customer Service"}</h3>
+            <ul className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
+              <li><Link to="/profile" className="hover:text-primary transition">{t('myAccount') || "My Account"}</Link></li>
+              <li><Link to="/shipping" className="hover:text-primary transition">{t('shippingPolicy') || "Shipping Policy"}</Link></li>
+              <li><Link to="#" className="hover:text-primary transition">{t('returns') || "Returns"}</Link></li>
+              <li><Link to="#" className="hover:text-primary transition">{t('faq') || "FAQ"}</Link></li>
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* 4. النشرة البريدية (شكل فقط) */}
           <div>
-            <h4 className="text-white font-bold uppercase mb-6 border-b border-primary w-fit pb-2">Newsletter</h4>
-            <form className="relative">
-              <input 
-                type="email" 
-                placeholder="Your Email" 
-                className="w-full bg-dark border border-white/10 rounded-lg py-3 px-4 focus:outline-none focus:border-primary transition text-sm text-white"
+            <h3 className="font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">{t('newsletter') || "Newsletter"}</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+              {t('newsletterDesc') || "Subscribe to get special offers and updates."}
+            </p>
+            <form className="flex flex-col gap-2">
+              <input
+                type="email"
+                placeholder={t('enterEmail') || "Enter your email"}
+                className="bg-gray-100 dark:bg-white/5 border border-transparent focus:border-primary text-gray-900 dark:text-white text-sm rounded-lg px-4 py-3 outline-none transition"
               />
-              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary p-2 rounded-md text-white">
-                <FaPaperPlane />
+              <button className="bg-primary hover:bg-orange-600 text-white font-bold py-3 rounded-lg text-sm transition uppercase">
+                {t('subscribe') || "Subscribe"}
               </button>
             </form>
           </div>
         </div>
 
-        <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-gray-500 text-[10px] tracking-[0.2em]">© 2025 NOXSTORE Digital Experience.</p>
+        <div className="border-t border-gray-200 dark:border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <p className="text-gray-500 dark:text-gray-500 text-xs">
+            &copy; {currentYear} SmartShop. All Rights Reserved.
+          </p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs flex items-center gap-1">
+            Made with <FaHeart className="text-red-500" /> by <span className="text-gray-900 dark:text-white font-bold">Amr & Belal</span>
+          </p>
         </div>
       </div>
     </footer>

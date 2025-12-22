@@ -1,16 +1,15 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useWishlist } from '../../context/WishlistContext';
 import ProductCard from '../../components/productcard/ProductCard'; 
 import Meta from '../../components/tapheader/Meta';
-import { Link } from 'react-router-dom';
-import { useSettings } from '../../context/SettingsContext'; // 👈 1. استدعاء هوك الإعدادات
+import { useSettings } from '../../context/SettingsContext';
 
 const WishlistScreen = () => {
     const { wishlistItems } = useWishlist();
-    const { t } = useSettings(); // 👈 2. استخراج دالة الترجمة
+    const { t } = useSettings();
 
     return (
-        // 👇 3. الخلفية متغيرة حسب الوضع
         <div className="min-h-screen pt-28 px-6 bg-gray-50 dark:bg-dark pb-10 transition-colors duration-300">
             <Meta title={t('myWishlist') || "My Wishlist"} />
             
@@ -28,11 +27,10 @@ const WishlistScreen = () => {
                         </Link>
                     </div>
                 ) : (
-                    // 👇 4. الجريد متجاوب مع باقي الصفحات
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                         {wishlistItems.map(product => (
                             <div key={product.id} className="h-full">
-                               {/* استخدام نفس الكارت الموحد */}
+                               {/* ProductCard هو اللي بيتولى عرض الصورة والتعامل مع الرابط */}
                                <ProductCard product={product} /> 
                             </div>
                         ))}

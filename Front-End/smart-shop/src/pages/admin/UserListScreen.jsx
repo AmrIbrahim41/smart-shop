@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; 
+// استدعاء api فقط (مش محتاجين axios ولا config)
 import api from '../../api'; 
 import { FaTimes, FaCheck, FaTrash, FaUser, FaStore, FaEnvelope, FaIdBadge, FaUsersCog } from 'react-icons/fa'; 
-import { useNavigate } from 'react-router-dom'; 
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext'; 
 
@@ -16,10 +17,9 @@ const UserListScreen = () => {
 
   const fetchUsers = async () => {
       try {
-        const config = {
-            headers: { Authorization: `Bearer ${userInfo.token}` }
-        };
-        const { data } = await api.get('/users/', config);
+        // التعديل: استخدام api.get مباشرة بدون headers يدوية
+        // وتعديل المسار ليكون /api/users/
+        const { data } = await api.get('/api/users/');
         setUsers(data);
         setLoading(false);
       } catch (error) {
@@ -39,11 +39,11 @@ const UserListScreen = () => {
   const deleteHandler = async (id) => {
     if(window.confirm(t('confirmDeleteUser') || 'Are you sure you want to delete this user?')) {
         try {
-            const config = {
-                headers: { Authorization: `Bearer ${userInfo.token}` }
-            };
-            await api.delete(`/users/delete/${id}/`, config);
+            // التعديل: الحذف باستخدام api.delete مباشرة
+            await api.delete(`/api/users/delete/${id}/`);
+            
             alert(t('userDeleted') || "User Deleted Successfully");
+            // تحديث القائمة محلياً بدل إعادة طلب السيرفر (أسرع)
             setUsers(users.filter(user => user.id !== id)); 
         } catch (error) {
             alert(t('deleteUserError') || "Error deleting user");
@@ -52,6 +52,7 @@ const UserListScreen = () => {
   };
 
   const filteredUsers = users.filter(user => {
+      // منطق تحديد نوع المستخدم (بائع، أدمن، عميل)
       const userType = user.profile ? user.profile.type : (user.isAdmin ? 'admin' : 'customer');
       if (filterType === 'vendor') return userType === 'vendor';
       return userType === 'customer' || userType === 'admin'; 
@@ -65,7 +66,7 @@ const UserListScreen = () => {
             <FaUsersCog className="text-primary" /> {t('usersManagement') || "USERS MANAGEMENT"}
         </h1>
 
-        {/* 👇 أزرار التبديل (Tabs) المطورة والمرنة 👇 */}
+        {/* أزرار التبديل (Tabs) */}
         <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8">
             <button 
                 onClick={() => setFilterType('customer')}
@@ -104,9 +105,7 @@ const UserListScreen = () => {
           <div className="text-gray-600 dark:text-white text-center font-bold animate-pulse py-20">{t('loadingUsers') || "Loading Users..."}</div>
         ) : (
           <>
-            {/* ========================================= */}
             {/* 1. عرض الموبايل (Cards View) */}
-            {/* ========================================= */}
             <div className="md:hidden space-y-4">
                 {filteredUsers.length === 0 ? (
                     <div className="p-10 text-center text-gray-500 dark:text-gray-400 font-bold bg-white dark:bg-dark-accent rounded-2xl border border-gray-200 dark:border-white/10">
@@ -151,9 +150,7 @@ const UserListScreen = () => {
                 )}
             </div>
 
-            {/* ========================================= */}
             {/* 2. عرض الكمبيوتر (Table View) */}
-            {/* ========================================= */}
             <div className="hidden md:block overflow-x-auto bg-white dark:bg-dark-accent rounded-xl border border-gray-200 dark:border-white/10 shadow-lg transition-colors">
                 <table className="w-full text-left border-collapse">
                 <thead>

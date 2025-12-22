@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+// تعديل: استبدال axios بـ api من الملف المركزي
+import api from '../../api'; 
 import Meta from '../../components/tapheader/Meta';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import { useSettings } from '../../context/SettingsContext'; // 👈 1. استدعاء هوك الإعدادات
+import { useSettings } from '../../context/SettingsContext';
 
 const ActivationScreen = () => {
     const { uid, token } = useParams();
     const [status, setStatus] = useState('loading'); // loading, success, error
     
-    // 👇 2. استخراج دالة الترجمة
     const { t } = useSettings();
 
     useEffect(() => {
         const activateAccount = async () => {
             try {
-                // تأكد من أن الرابط صحيح ويعمل مع الباك إند الخاص بك
-                await axios.post(`http://127.0.0.1:8000/api/users/activate/${uid}/${token}/`);
+                // تعديل: استخدام api.post والمسار النسبي
+                await api.post(`/api/users/activate/${uid}/${token}/`);
                 setStatus('success');
             } catch (error) {
                 setStatus('error');
@@ -26,7 +26,6 @@ const ActivationScreen = () => {
     }, [uid, token]);
 
     return (
-        // 👇 3. خلفية متغيرة حسب الوضع
         <div className="min-h-screen pt-40 px-6 bg-gray-50 dark:bg-dark flex justify-center text-center transition-colors duration-300">
             <Meta title={t('activationTitle') || "Account Activation"} />
             
@@ -39,7 +38,6 @@ const ActivationScreen = () => {
                 )}
 
                 {status === 'success' && (
-                    // كارت النجاح: أخضر فاتح في الوضع النهاري، وشفاف في الليلي
                     <div className="bg-green-50 border border-green-200 dark:bg-green-500/10 dark:border-green-500/30 p-8 rounded-3xl shadow-lg dark:shadow-none transition-colors duration-300">
                         <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
                         <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 transition-colors">
@@ -55,7 +53,6 @@ const ActivationScreen = () => {
                 )}
 
                 {status === 'error' && (
-                    // كارت الفشل: أحمر فاتح في الوضع النهاري، وشفاف في الليلي
                     <div className="bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/30 p-8 rounded-3xl shadow-lg dark:shadow-none transition-colors duration-300">
                         <FaTimesCircle className="text-red-500 text-6xl mx-auto mb-4" />
                         <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 transition-colors">

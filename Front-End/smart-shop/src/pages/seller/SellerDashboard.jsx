@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { ENDPOINTS } from '../../api';
-import { FaPlus, FaEdit, FaTrash, FaEye } from 'react-icons/fa'; 
+// تعديل: استيراد getImageUrl
+import api, { ENDPOINTS, getImageUrl } from '../../api';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaImage } from 'react-icons/fa'; 
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 1. Import Hook
+import { useSettings } from '../../context/SettingsContext';
 
 const SellerDashboard = () => {
   const [products, setProducts] = useState([]);
@@ -11,10 +12,11 @@ const SellerDashboard = () => {
   const [error, setError] = useState(null);
   
   const navigate = useNavigate();
-  const { t } = useSettings(); // 2. Use Hook
+  const { t } = useSettings();
 
   const fetchMyProducts = async () => {
     try {
+      // استخدام api للحصول على المنتجات الخاصة بالبائع
       const response = await api.get(ENDPOINTS.MY_PRODUCTS);
       setProducts(response.data);
       setLoading(false);
@@ -31,8 +33,9 @@ const SellerDashboard = () => {
   const deleteHandler = async (id) => {
     if (window.confirm(t('confirmDelete') || 'Are you sure?')) {
       try {
-        await api.delete(`${ENDPOINTS.DELETE_PRODUCT}${id}/`);
-        fetchMyProducts();
+        // استخدام المسار النسبي للحذف
+        await api.delete(`/api/products/delete/${id}/`);
+        fetchMyProducts(); // تحديث القائمة بعد الحذف
       } catch (err) {
         alert(t('deleteError') || 'Error deleting product');
       }
@@ -41,7 +44,8 @@ const SellerDashboard = () => {
 
   const createProductHandler = async () => {
     try {
-        const response = await api.post(ENDPOINTS.CREATE_PRODUCT, {});
+        // إنشاء منتج جديد فارغ ثم التوجيه للتعديل
+        const response = await api.post('/api/products/create/', {});
         navigate(`/product/${response.data.id}/edit`, { state: { isNew: true } });
     } catch (err) {
         alert(t('createError') || 'Error creating product');
@@ -99,12 +103,20 @@ const SellerDashboard = () => {
                       
                       {/* product name & image */}
                       <td className="p-5 text-gray-900 dark:text-white font-bold flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden border border-gray-200 dark:border-white/10 flex-shrink-0">
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-700 overflow-hidden border border-gray-200 dark:border-white/10 flex-shrink-0 flex items-center justify-center">
+                            {/* تعديل: استخدام getImageUrl */}
                             {product.image ? (
-                                <img src={`http://127.0.0.1:8000${product.image}`} alt={product.name} className="w-full h-full object-cover" />
+                                <img 
+                                    src={getImageUrl(product.image)} 
+                                    alt={product.name} 
+                                    className="w-full h-full object-cover" 
+                                    onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }}
+                                />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400"><FaPlus/></div>
+                                <FaImage className="text-gray-400" />
                             )}
+                            {/* أيقونة احتياطية تظهر في حالة خطأ الصورة */}
+                            <FaImage className="text-gray-400 hidden" />
                         </div>
                         <div>
                             <div className="text-sm line-clamp-1">{product.name}</div>
@@ -132,7 +144,7 @@ const SellerDashboard = () => {
                             </button>
 
                             <button 
-                                onClick={() => navigate(`/product/${product.id}/edit`)}
+                                onClick={() => navigate(`/seller/product/${product.id}/edit`)} // تعديل: المسار الصحيح لتعديل التاجر
                                 className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 rounded-lg hover:bg-blue-500 hover:text-white transition shadow-sm"
                                 title={t('edit') || "Edit"}
                             >

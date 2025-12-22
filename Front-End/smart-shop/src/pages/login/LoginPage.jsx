@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import api, { ENDPOINTS, setAuthToken } from '../../api';
+// تعديل: استدعاء api و ENDPOINTS فقط لأن الـ Interceptor يتولى الباقي
+import api, { ENDPOINTS } from '../../api';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 👈 1. استدعاء هوك الإعدادات
+import { useSettings } from '../../context/SettingsContext';
 
 const LoginScreen = () => {
   const navigate = useNavigate();
-  const { t } = useSettings(); // 👈 2. استخراج دالة الترجمة
+  const { t } = useSettings();
 
-  // 1. الحالة (State)
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // لو المستخدم مسجل دخول بالفعل، وجهه للصفحة الرئيسية
     if (localStorage.getItem('token')) {
       navigate('/');
     }
@@ -30,22 +31,25 @@ const LoginScreen = () => {
     setError(null);
 
     try {
+      // إرسال طلب تسجيل الدخول للباك إند
       const response = await api.post(ENDPOINTS.LOGIN, {
         "username": formData.email,
         "password": formData.password
       });
 
       const data = response.data;
-      const access = data.access;
-
-      localStorage.setItem('token', access);
-      setAuthToken(access);
+      
+      // حفظ التوكن وبيانات المستخدم
+      localStorage.setItem('token', data.access);
       localStorage.setItem('userInfo', JSON.stringify(data));
 
+      // التوجيه بناءً على نوع المستخدم (تاجر/أدمن أو زبون)
       if (data.isAdmin || data.profile?.type === 'vendor') {
         window.location.href = '/dashboard';
       } else {
-        window.location.href = '/';
+        // التحقق من وجود redirect في الرابط (زي ما عملنا في السلة)
+        const redirect = new URLSearchParams(window.location.search).get('redirect');
+        window.location.href = redirect ? `/${redirect}` : '/';
       }
 
     } catch (err) {
@@ -56,14 +60,11 @@ const LoginScreen = () => {
   };
 
   return (
-    // 👇 3. الخلفية متغيرة حسب الوضع (gray-50 للفاتح، dark للغامق)
     <div className="min-h-screen pt-32 pb-20 px-6 flex items-center justify-center bg-gray-50 dark:bg-dark transition-colors duration-300">
       <Meta title={`${t('login') || 'Login'} | SmartShop`} />
       
-      {/* الكارت (أبيض في الفاتح، غامق في الليلي) */}
       <div className="bg-white dark:bg-dark-accent p-8 rounded-3xl border border-gray-200 dark:border-white/10 w-full max-w-md shadow-lg dark:shadow-2xl relative overflow-hidden transition-colors duration-300">
         
-        {/* خلفية جمالية خفيفة */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-orange-600"></div>
 
         <h2 className="text-3xl font-black text-center mb-2 text-gray-900 dark:text-white tracking-wide transition-colors">
@@ -73,7 +74,6 @@ const LoginScreen = () => {
             {t('loginSubtitle') || "Login to manage your orders & profile"}
         </p>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-4 rounded-xl text-sm mb-6 text-center dark:border-red-500/20 flex items-center justify-center gap-2 animate-pulse transition-colors">
             ⚠️ {error}
@@ -81,8 +81,6 @@ const LoginScreen = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
-          {/* Email Input */}
           <div className="relative group">
             <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors duration-300" />
             <input
@@ -96,7 +94,6 @@ const LoginScreen = () => {
             />
           </div>
 
-          {/* Password Input */}
           <div className="relative group">
             <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors duration-300" />
             <input
@@ -110,14 +107,12 @@ const LoginScreen = () => {
             />
           </div>
 
-          {/* Forgot Password Link */}
           <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-gray-500 dark:text-gray-400 hover:text-primary transition-colors duration-200">
               {t('forgotPasswordLink') || "Forgot Password?"}
             </Link>
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}

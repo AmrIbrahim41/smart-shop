@@ -2,15 +2,17 @@ import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { FaCheckCircle, FaMapMarkerAlt, FaCreditCard, FaBoxOpen } from 'react-icons/fa';
-import api, { ENDPOINTS } from '../../api';
+// استدعاء getImageUrl
+import api, { ENDPOINTS, getImageUrl } from '../../api';
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 1. Import Hook
+import { useSettings } from '../../context/SettingsContext';
 
 const PlaceOrderScreen = () => {
   const { cartItems, shippingAddress, paymentMethod, clearCart } = useCart();
   const navigate = useNavigate();
-  const { t } = useSettings(); // 2. Use Hook
+  const { t } = useSettings();
 
+  // حسابات الأسعار
   const itemsPrice = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const shippingPrice = itemsPrice > 100 ? 0 : 10; 
   const taxPrice = Number((0.15 * itemsPrice).toFixed(2)); 
@@ -26,14 +28,6 @@ const PlaceOrderScreen = () => {
 
   const placeOrderHandler = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-      const config = {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-
       const orderData = {
         orderItems: cartItems,
         shippingAddress: shippingAddress,
@@ -44,10 +38,14 @@ const PlaceOrderScreen = () => {
         totalPrice: totalPrice,
       };
 
-      const { data } = await api.post(ENDPOINTS.CREATE_ORDER, orderData, config);
+      // التعديل: إزالة الـ config اليدوي واستخدام ENDPOINTS
+      const { data } = await api.post(ENDPOINTS.CREATE_ORDER, orderData);
 
+      // تفريغ السلة بعد نجاح الطلب
       clearCart();
-      navigate(`/order/${data.id}`); 
+      
+      // التوجيه لصفحة تفاصيل الطلب الجديد
+      navigate(`/order/${data.id || data._id}`); 
 
     } catch (error) {
       alert(error.response?.data?.detail || t('errorPlacingOrder') || "Error placing order");
@@ -107,7 +105,13 @@ const PlaceOrderScreen = () => {
                             {cartItems.map((item, index) => (
                                 <div key={index} className="flex items-center justify-between bg-gray-50 dark:bg-dark/50 p-3 rounded-xl border border-gray-100 dark:border-transparent transition-colors">
                                     <div className="flex items-center gap-4">
-                                        <img src={`http://127.0.0.1:8000${item.image}`} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-white/10" />
+                                        {/* التعديل: استخدام getImageUrl */}
+                                        <img 
+                                            src={getImageUrl(item.image)} 
+                                            alt={item.name} 
+                                            className="w-12 h-12 object-cover rounded-lg border border-gray-200 dark:border-white/10" 
+                                            onError={(e) => { e.target.src = '/images/placeholder.png'; }}
+                                        />
                                         <Link to={`/product/${item.product}`} className="text-gray-900 dark:text-white font-bold hover:text-primary transition line-clamp-1">{item.name}</Link>
                                     </div>
                                     <div className="text-gray-500 dark:text-gray-400 text-sm font-bold whitespace-nowrap">

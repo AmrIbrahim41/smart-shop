@@ -1,112 +1,86 @@
 import React from 'react';
-import { FaHeart, FaRegHeart, FaShoppingCart } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
-import { useWishlist } from '../../context/WishlistContext';
-import { useCart } from '../../context/CartContext';
-import { useSettings } from '../../context/SettingsContext'; // 👈 1. استدعاء الإعدادات
+import { Link } from 'react-router-dom';
+import { FaStar, FaShoppingCart, FaEye, FaTag } from 'react-icons/fa';
+import { useSettings } from '../../context/SettingsContext';
+// استدعاء الدالة المركزية للصور
+import { getImageUrl } from '../../api';
 
 const ProductCard = ({ product }) => {
-  const navigate = useNavigate();
-  const { toggleWishlist, isInWishlist } = useWishlist();
-  const isWishlisted = isInWishlist(product.id);
-  const { addToCart } = useCart();
-  
-  // 👇 2. استدعاء دالة الترجمة
   const { t } = useSettings();
 
-  // جلب بيانات المستخدم (للتأكد من تسجيل الدخول)
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // 👇 3. التحقق: لو مش مسجل، روح لصفحة الدخول فوراً
-    if (!userInfo) {
-        navigate('/login');
-        return; // وقف التنفيذ هنا
-    }
-
-    // لو مسجل، كمل عادي
-    if (product.countInStock > 0) {
-      addToCart(product, 1);
-      alert(`${t('addToCartSuccess') || "Added 1 item to cart!"} 🛒`);
-    } else {
-      alert(t('outOfStockMsg') || "Sorry, this item is out of stock");
-    }
-  };
-
-  // حساب نسبة الخصم
-  const discountPercentage = product.discount_price && product.discount_price > 0
+  // حساب نسبة الخصم لو فيه سعر خصم
+  const discountPercentage = product.discount_price > 0 
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : 0;
 
   return (
-    // 👇 4. دعم الوضع النهاري والليلي (bg-white dark:bg-dark-accent)
-    <div className="product-card bg-white dark:bg-dark-accent rounded-3xl p-4 border border-gray-200 dark:border-white/5 relative group transition-all hover:border-primary/50 shadow-lg dark:shadow-none h-full flex flex-col">
-
-      {discountPercentage > 0 && (
-        <div className="absolute top-6 left-6 z-10 bg-red-500 text-white text-[12px] font-bold px-2 py-1 rounded shadow-lg animate-pulse">
-          -{discountPercentage}% SALE
+    <div className="group relative bg-white dark:bg-dark-accent rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
+      
+      {/* شارة الخصم (Badge) */}
+      {product.discount_price > 0 && (
+        <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg animate-bounce">
+          {discountPercentage}% {t('off') || 'OFF'}
         </div>
       )}
 
-      {/* Wishlist Button - (اختياري: ممكن تخفيه لغير المسجلين بـ userInfo && ...) */}
-      <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!userInfo) {
-             navigate('/login');
-             return;
-          }
-          toggleWishlist(product);
-        }}
-        className="absolute top-6 right-6 z-20 transition transform active:scale-90"
-      >
-        {isWishlisted ? (
-          <FaHeart className="text-xl text-primary drop-shadow-md" />
-        ) : (
-          <FaRegHeart className="text-xl text-gray-400 hover:text-red-500 dark:hover:text-white" />
-        )}
-      </button>
-
-      {/* Image Area */}
-      <div className="h-64 rounded-2xl overflow-hidden mb-4 bg-gray-100 dark:bg-dark relative flex items-center justify-center transition-colors duration-300">
-        <Link to={`/product/${product.id}`} className="w-full h-full flex items-center justify-center">
+      {/* صورة المنتج */}
+      <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-white/5">
+        <Link to={`/product/${product.id || product._id}`}>
           <img
-            src={`http://127.0.0.1:8000${product.image}`}
+            /* التعديل هنا: استخدام getImageUrl لضمان عمل الصورة أونلاين */
+            src={getImageUrl(product.image)}
             alt={product.name}
-            className="max-h-full max-w-full object-contain group-hover:scale-110 transition duration-500 mix-blend-multiply dark:mix-blend-normal"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            onError={(e) => { e.target.src = '/images/placeholder.png'; }}
           />
         </Link>
+
+        {/* أزرار سريعة تظهر عند التحويم (Hover) */}
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+          <Link 
+            to={`/product/${product.id || product._id}`}
+            className="p-3 bg-white text-dark rounded-full hover:bg-primary hover:text-white transition-colors duration-300 shadow-xl"
+          >
+            <FaEye size={18} />
+          </Link>
+        </div>
       </div>
 
-      {/* Info Area */}
-      <div className="mt-auto">
-        <Link to={`/product/${product.id}`}>
-          <h3 className="font-bold mb-1 text-gray-900 dark:text-white hover:text-primary transition truncate text-lg">
+      {/* تفاصيل المنتج */}
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-1">
+          <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+            <FaTag size={8} /> {product.category_name || t('general')}
+          </span>
+          <div className="flex items-center text-yellow-400 text-[10px]">
+            <FaStar />
+            <span className="ms-1 text-gray-500 dark:text-gray-400">{product.rating || '0.0'}</span>
+          </div>
+        </div>
+
+        <Link to={`/product/${product.id || product._id}`}>
+          <h3 className="font-bold text-gray-800 dark:text-white text-sm line-clamp-1 mb-2 group-hover:text-primary transition-colors">
             {product.name}
           </h3>
         </Link>
 
-        <div className="flex items-center space-x-3 mb-4">
-          {product.discount_price && product.discount_price > 0 ? (
+        {/* السعر */}
+        <div className="flex items-center gap-2">
+          {product.discount_price > 0 ? (
             <>
-              <span className="text-primary font-black text-xl">${product.discount_price}</span>
-              <span className="text-gray-400 dark:text-gray-500 line-through text-sm">${product.price}</span>
+              <span className="text-lg font-black text-primary">${product.discount_price}</span>
+              <span className="text-xs text-gray-400 line-through">${product.price}</span>
             </>
           ) : (
-            <span className="text-primary font-black text-xl">${product.price}</span>
+            <span className="text-lg font-black text-primary">${product.price}</span>
           )}
         </div>
 
-        <button
-          onClick={handleAddToCart}
-          disabled={product.countInStock === 0}
-          className="w-full bg-dark dark:bg-white text-white dark:text-dark font-bold py-3 rounded-xl hover:bg-primary dark:hover:bg-primary hover:text-white transition flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-md uppercase"
+        {/* زر الإضافة للسلة */}
+        <button 
+          className="w-full mt-4 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-white text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 border border-gray-100 dark:border-white/10"
         >
-          <FaShoppingCart /> {product.countInStock > 0 ? (t('addToCart') || 'ADD TO CART') : (t('outOfStock') || 'SOLD OUT')}
+          <FaShoppingCart /> {t('addToCart') || 'Add to Cart'}
         </button>
       </div>
     </div>

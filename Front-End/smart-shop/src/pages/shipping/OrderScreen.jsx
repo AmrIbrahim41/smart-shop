@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import api, { ENDPOINTS } from '../../api';
+// تعديل: استيراد getImageUrl
+import api, { ENDPOINTS, getImageUrl } from '../../api';
 import { FaUser, FaShippingFast } from 'react-icons/fa';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 1. Import Hook
+import { useSettings } from '../../context/SettingsContext';
 
 const OrderScreen = () => {
   const { id } = useParams();
@@ -12,13 +13,13 @@ const OrderScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const { t } = useSettings(); // 2. Use Hook
+  const { t } = useSettings();
 
   const userInfo = JSON.parse(localStorage.getItem('userInfo'));
 
   const fetchOrder = async () => {
     try {
-      const { data } = await api.get(`${ENDPOINTS.ORDER_DETAILS}${id}/`);
+      const { data } = await api.get(ENDPOINTS.ORDER_DETAILS(id));
       setOrder(data);
       setLoading(false);
     } catch (err) {
@@ -33,7 +34,7 @@ const OrderScreen = () => {
 
   const successPaymentHandler = async (paymentResult) => {
     try {
-      await api.put(`${ENDPOINTS.PAY_ORDER}${id}/pay/`, paymentResult);
+      await api.put(ENDPOINTS.PAY_ORDER(id), paymentResult);
       alert(t('paymentSuccessful') || "Payment Successful! 🎉");
       fetchOrder(); 
     } catch (err) {
@@ -43,13 +44,9 @@ const OrderScreen = () => {
 
   const deliverHandler = async () => {
     try {
-        const config = {
-            headers: {
-                Authorization: `Bearer ${userInfo.token}`, 
-            },
-        };
-        
-        await api.put(`orders/${id}/deliver/`, {}, config);
+        // تعديل: إزالة الـ config اليدوي واستخدام ENDPOINTS
+        // الـ Interceptor هيقوم بإرسال التوكن تلقائياً
+        await api.put(ENDPOINTS.DELIVER_ORDER(id), {});
         
         alert(t('orderDelivered') || "Order Delivered! 🚚");
         fetchOrder();
@@ -126,7 +123,13 @@ const OrderScreen = () => {
                 <h2 className="text-xl font-black text-gray-900 dark:text-white mb-4 uppercase">{t('orderItems') || "ORDER ITEMS"}</h2>
                 {order.orderItems?.map((item, index) => (
                     <div key={index} className="flex items-center gap-4 border-b border-gray-200 dark:border-white/5 pb-4 last:border-0 mb-4 last:mb-0">
-                        <img src={`http://127.0.0.1:8000${item.image}`} alt={item.name} className="w-12 h-12 rounded-lg object-cover border border-gray-200 dark:border-white/10" />
+                        {/* تعديل: استخدام getImageUrl */}
+                        <img 
+                            src={getImageUrl(item.image)} 
+                            alt={item.name} 
+                            className="w-12 h-12 rounded-lg object-cover border border-gray-200 dark:border-white/10" 
+                            onError={(e) => { e.target.src = '/images/placeholder.png'; }}
+                        />
                         <div className="flex-1 text-gray-900 dark:text-white font-bold">
                             <Link to={`/product/${item.product}`} className='hover:text-primary transition line-clamp-1'>{item.name}</Link>
                         </div>
@@ -183,6 +186,7 @@ const OrderScreen = () => {
                     </PayPalScriptProvider>
                 )}
 
+                {/* زرار تغيير حالة التوصيل للأدمن فقط */}
                 {userInfo && userInfo.isAdmin && order.isPaid && !order.isDelivered && (
                     <button 
                         onClick={deliverHandler}

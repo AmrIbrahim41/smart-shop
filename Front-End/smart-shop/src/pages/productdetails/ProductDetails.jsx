@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import api, { ENDPOINTS } from '../../api';
+// تم إضافة apiService و getImageUrl هنا
+import api, { ENDPOINTS, apiService, getImageUrl } from '../../api';
 import { FaShoppingCart, FaArrowLeft, FaHeart, FaRegHeart, FaPlus, FaMinus, FaUserCircle, FaEdit } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import Rating from '../../components/rating/Rating';
@@ -30,7 +31,8 @@ const ProductDetails = () => {
 
   const fetchProduct = async () => {
     try {
-      const { data } = await api.get(`${ENDPOINTS.PRODUCTS}${id}/`);
+      // تعديل: استخدام apiService بدلاً من api.get اليدوي
+      const { data } = await apiService.getProductDetails(id);
       setProduct(data);
       setDisplayImage(data.image); 
       setLoading(false);
@@ -53,15 +55,12 @@ const ProductDetails = () => {
     if (qty > 1) setQty(qty - 1);
   };
 
-  // 👇 التعديل هنا: فحص تسجيل الدخول قبل الإضافة
   const addToCartHandler = () => {
-    // 1. لو مش مسجل، روح لصفحة الدخول فوراً
     if (!userInfo) {
         navigate('/login');
         return;
     }
 
-    // 2. لو مسجل، كمل الإضافة
     if (product.countInStock > 0) {
       addToCart(product, qty);
       alert(`Added ${qty} item(s) to Cart 🛒`);
@@ -86,15 +85,13 @@ const ProductDetails = () => {
 
     try {
       setReviewLoading(true);
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo.token}` }
-      };
       
+      // ملاحظة: الـ Interceptor سيتولى إضافة التوكن تلقائياً
       if (isEditing) {
-          await api.put(`products/${id}/reviews/update/`, { rating, comment }, config);
+          await api.put(`api/products/${id}/reviews/update/`, { rating, comment });
           alert('Review Updated Successfully! ✅');
       } else {
-          await api.post(`products/${id}/reviews/create/`, { rating, comment }, config);
+          await api.post(`api/products/${id}/reviews/create/`, { rating, comment });
           alert('Review Submitted! Thank you.');
       }
       
@@ -115,27 +112,28 @@ const ProductDetails = () => {
 
   const userReview = product.reviews.find(r => r.user === userInfo?.id);
   const isWishlisted = isInWishlist(product.id);
+  // تعديل: التأكد من معالجة جميع الصور بالدالة المركزية
   const allImages = [product.image, ...(product.images ? product.images.map(img => img.image) : [])];
 
   return (
     <div className="min-h-screen pt-28 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
-      {product && <Meta title={product.name} description={product.description} />}
+      <Meta title={product.name} description={product.description} />
 
       <div className="max-w-7xl mx-auto">
         <Link to="/" className="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-white mb-6 inline-flex items-center gap-2 font-bold transition">
             <FaArrowLeft /> {t('backToProducts') || "BACK"}
         </Link>
 
-        {/* --- Grid: الصور والتفاصيل --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">
           
           {/* قسم الصور */}
           <div className="flex flex-col gap-4">
              <div className="bg-white dark:bg-dark-accent rounded-3xl p-8 border border-gray-200 dark:border-white/5 flex items-center justify-center relative group h-[400px] md:h-[500px] shadow-sm transition-colors duration-300">
                 <img 
-                    src={`http://127.0.0.1:8000${displayImage}`} 
+                    src={getImageUrl(displayImage)} 
                     alt={product.name} 
                     className="max-h-full max-w-full object-contain drop-shadow-xl transition duration-500" 
+                    onError={(e) => { e.target.src = '/images/placeholder.png'; }}
                 />
                 
                 <button 
@@ -161,7 +159,7 @@ const ProductDetails = () => {
                             }`}
                          >
                              <img 
-                                src={`http://127.0.0.1:8000${img}`} 
+                                src={getImageUrl(img)} 
                                 alt={`thumb-${index}`} 
                                 className="w-full h-full object-cover" 
                              />
@@ -235,7 +233,7 @@ const ProductDetails = () => {
           </div>
         </div>
 
-        {/* --- قسم المراجعات --- */}
+        {/* قسم المراجعات */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 border-t border-gray-200 dark:border-white/10 pt-10 transition-colors duration-300">
             <div>
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-6 uppercase tracking-wider">

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api, { ENDPOINTS } from '../../api';
-import axios from 'axios';
+// تعديل: استدعاء getImageUrl وإزالة axios اليدوي
+import api, { ENDPOINTS, getImageUrl } from '../../api';
 import { FaCamera, FaBoxOpen, FaUserEdit, FaCalendarAlt, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa'; 
 import Meta from '../../components/tapheader/Meta';
-import { useSettings } from '../../context/SettingsContext'; // 👈 1. استدعاء هوك الإعدادات
+import { useSettings } from '../../context/SettingsContext';
 
 const ProfileScreen = () => {
   const navigate = useNavigate();
-  const { t } = useSettings(); // 👈 2. استخراج دالة الترجمة
+  const { t } = useSettings();
 
   // States للبيانات الأساسية
   const [name, setName] = useState('');
@@ -48,7 +48,8 @@ const ProfileScreen = () => {
       setUserType(userInfo.profile?.type || 'customer');
 
       if (userInfo.profile?.profilePicture) {
-        setPreviewImage(`http://127.0.0.1:8000${userInfo.profile.profilePicture}`);
+        // تعديل: استخدام الدالة المركزية لعرض صورة البروفايل
+        setPreviewImage(getImageUrl(userInfo.profile.profilePicture));
       }
 
       const fetchMyOrders = async () => {
@@ -61,7 +62,8 @@ const ProfileScreen = () => {
       const fetchSellerOrders = async () => {
         if (userInfo.profile?.type === 'vendor') {
           try {
-            const { data } = await api.get('/users/seller/orders/');
+            // استخدام api بدلاً من axios
+            const { data } = await api.get('/api/users/seller/orders/');
             setSellerOrders(data);
           } catch (error) { console.log(error); }
         }
@@ -97,26 +99,29 @@ const ProfileScreen = () => {
     }
 
     try {
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
+      // تعديل: استخدام api.put وإزالة التوكن (الـ Interceptor هيقوم بالواجب)
+      // نحدد Content-Type كـ multipart/form-data للصور
+      const { data } = await api.put('/api/users/profile/update/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
-      const { data } = await axios.put('http://127.0.0.1:8000/api/users/profile/update/', formData, config);
-
+      // تحديث البيانات في التخزين المحلي
       localStorage.setItem('userInfo', JSON.stringify(data));
       setMessage(t('profileUpdated') || 'Profile Updated Successfully ✅');
       setPassword('');
       setConfirmPassword('');
+      
+      // تحديث الصورة المعروضة من السيرفر للتأكد
+      if(data.profile?.profilePicture) {
+         setPreviewImage(getImageUrl(data.profile.profilePicture));
+      }
+      
     } catch (error) {
       setMessage(t('profileUpdateError') || 'Error updating profile ❌');
     }
   };
 
   return (
-    // 👇 3. الخلفية متغيرة
     <div className="min-h-screen pt-28 pb-10 px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
       <Meta title={t('myProfile') || "My Profile"} />
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-10">
@@ -128,9 +133,10 @@ const ProfileScreen = () => {
             {/* صورة البروفايل */}
             <div className="relative w-32 h-32 mx-auto mb-4 group">
               <img
-                src={previewImage || "https://via.placeholder.com/150"}
+                src={previewImage || "/images/placeholder.png"} // صورة احتياطية في حالة عدم الوجود
                 alt="Profile"
                 className="w-full h-full rounded-full object-cover border-4 border-gray-100 dark:border-dark shadow-lg transition-colors"
+                onError={(e) => { e.target.src = '/images/placeholder.png'; }}
               />
               <label className="absolute bottom-0 right-0 bg-primary p-2 rounded-full cursor-pointer hover:bg-orange-600 transition shadow-lg">
                 <FaCamera className="text-white" />
@@ -153,7 +159,6 @@ const ProfileScreen = () => {
 
             <form onSubmit={submitHandler} className="space-y-4 text-left">
               
-              {/* الاسم والإيميل */}
               <div>
                 <label className="text-gray-500 dark:text-gray-400 text-xs ml-1 font-bold">{t('fullName') || "Full Name"}</label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded p-2 text-gray-900 dark:text-white text-sm focus:border-primary outline-none transition-colors" />
@@ -163,13 +168,11 @@ const ProfileScreen = () => {
                 <input type="email" value={email} readOnly className="w-full bg-gray-100 dark:bg-dark/50 border border-gray-200 dark:border-white/5 rounded p-2 text-gray-500 text-sm cursor-not-allowed transition-colors" />
               </div>
 
-              {/* رقم الهاتف */}
               <div>
                 <label className="text-gray-500 dark:text-gray-400 text-xs ml-1 font-bold">{t('phone') || "Phone Number"}</label>
                 <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded p-2 text-gray-900 dark:text-white text-sm focus:border-primary outline-none transition-colors" placeholder="01xxxxxxxxx" />
               </div>
 
-              {/* البيانات الجديدة */}
               <div>
                 <label className="text-gray-500 dark:text-gray-400 text-xs ml-1 flex items-center gap-1 font-bold"><FaCalendarAlt size={10}/> {t('birthdate') || "Birthdate"}</label>
                 <input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded p-2 text-gray-900 dark:text-white text-sm focus:border-primary outline-none custom-date-input transition-colors" />
@@ -188,7 +191,6 @@ const ProfileScreen = () => {
 
               <hr className="border-gray-200 dark:border-white/10 my-2 transition-colors" />
 
-              {/* الباسورد */}
               <div>
                 <label className="text-gray-500 dark:text-gray-400 text-xs ml-1 font-bold">{t('changePassword') || "Change Password"}</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded p-2 text-gray-900 dark:text-white text-sm focus:border-primary outline-none transition-colors" placeholder={t('newPasswordPlaceholder') || "New Password"} />
@@ -236,7 +238,7 @@ const ProfileScreen = () => {
 };
 
 // ------------------------------------------------------------------
-// 👇👇👇 OrdersTable المعدل 👇👇👇
+// 👇 OrdersTable (كما هو مع تحسينات طفيفة للتوافق)
 // ------------------------------------------------------------------
 const OrdersTable = ({ orders, isSeller, navigate, t }) => {
     return (
