@@ -28,7 +28,7 @@ import ResetPasswordScreen from './pages/login/ResetPasswordScreen';
 import ActivationScreen from './pages/registerPage/ActivationScreen';
 
 // Seller Pages & Layout
-import SellerLayout from './pages/seller/SellerLayout'; // 👈 استيراد الليآوت
+import SellerLayout from '../src/components/sellerlayout/SellerLayout'; // 👈 استيراد الليآوت
 import SellerDashboard from './pages/seller/SellerDashboard';
 import ProductEditScreen from './pages/seller/ProductEditScreen';
 import MyProducts from './pages/seller/MyProducts'; // 👈 استيراد صفحة منتجاتي
