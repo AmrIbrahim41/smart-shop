@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import api, { ENDPOINTS, apiService, getImageUrl } from '../../api';
-import { FaArrowLeft, FaSave, FaImage, FaImages, FaCheckCircle, FaClock, FaTimesCircle, FaTimes, FaTrash } from 'react-icons/fa';
+import { apiService, getImageUrl } from '../../api'; // تأكد إن الاستدعاء كدة صح حسب ملف api.js
+import { FaArrowLeft, FaSave, FaImage, FaImages, FaTrash, FaTimes } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
 
@@ -12,21 +12,18 @@ const ProductEditScreen = () => {
 
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
     const isAdmin = userInfo?.isAdmin;
+    // لو أدمن يرجع للوحة الأدمن، لو بائع يرجع للداشبورد بتاعته
     const goBackLink = isAdmin ? "/admin/productlist" : "/dashboard";
 
     const [name, setName] = useState('');
     const [price, setPrice] = useState(0);
     const [discountPrice, setDiscountPrice] = useState(0);
 
-    // 1. الصورة الأساسية
     const [image, setImage] = useState('');
     const [preview, setPreview] = useState('');
 
-    // 2. صور المعرض الجديدة (للمعاينة والرفع)
     const [subImages, setSubImages] = useState([]);
     const [subImagesPreview, setSubImagesPreview] = useState([]);
-
-    // 3. صور المعرض القديمة (القادمة من الداتابيز)
     const [oldImages, setOldImages] = useState([]);
 
     const [brand, setBrand] = useState('');
@@ -39,35 +36,34 @@ const ProductEditScreen = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-
-
     const fetchData = async () => {
         if (!id) return;
         try {
-            // جلب الأقسام
             const { data: categories } = await apiService.getCategories();
             setCategoriesList(categories);
 
-            // جلب المنتج
             const { data } = await apiService.getProductDetails(id);
 
             setName(data.name);
             setPrice(data.price);
             setDiscountPrice(data.discount_price || 0);
             setImage(data.image);
-            setPreview(getImageUrl(data.image)); // استخدام الدالة المركزية
+            setPreview(getImageUrl(data.image));
             setOldImages(data.images || []);
             setBrand(data.brand);
             setCountInStock(data.countInStock);
+            // التعامل بذكاء مع القسم سواء جاي كـ رقم أو كائن
             setCategory(data.category?.id || data.category || '');
             setDescription(data.description);
             setApprovalStatus(data.approval_status);
         } catch (err) {
             console.error("Error fetching data:", err);
+            setError("Failed to load product data");
         } finally {
             setLoading(false);
         }
     };
+
     useEffect(() => {
         fetchData();
     }, [id]);
@@ -98,7 +94,6 @@ const ProductEditScreen = () => {
             try {
                 await apiService.deleteProductImage(imageId);
                 setOldImages(prev => prev.filter(img => img.id !== imageId));
-                alert('Image Deleted');
             } catch (error) {
                 alert('Error deleting image');
             }
@@ -108,7 +103,6 @@ const ProductEditScreen = () => {
     const submitHandler = async (e) => {
         e.preventDefault();
 
-        // 1. تجهيز البيانات في FormData لإرسال الملفات (الصور)
         const formData = new FormData();
         formData.append('name', name);
         formData.append('price', price);
@@ -118,17 +112,14 @@ const ProductEditScreen = () => {
         formData.append('description', description);
         formData.append('category', category);
 
-        // إضافة حالة الموافقة (فقط للأدمن)
         if (isAdmin) {
             formData.append('approval_status', approvalStatus);
         }
 
-        // إضافة الصورة الأساسية (فقط إذا كانت ملفاً جديداً)
         if (image instanceof File) {
             formData.append('image', image);
         }
 
-        // إضافة الصور الفرعية المتعددة
         if (subImages.length > 0) {
             subImages.forEach((file) => {
                 formData.append('images', file);
@@ -140,27 +131,23 @@ const ProductEditScreen = () => {
             let response;
 
             if (id) {
-                // حالة التعديل: نستخدم دالة updateProduct من الـ apiService
                 response = await apiService.updateProduct(id, formData);
-                alert(t('productUpdated') || 'Product Updated Successfully! ✅');
+                alert(t('productUpdated') || 'Product Updated Successfully!');
             } else {
-                // حالة الإنشاء: نستخدم دالة createProduct من الـ apiService
                 response = await apiService.createProduct(formData);
-                alert(t('productCreated') || 'Product Created Successfully! ✅');
-                // بعد الإنشاء ممكن توجه المستخدم لصفحة المنتجات
+                alert(t('productCreated') || 'Product Created Successfully!');
                 navigate(goBackLink);
             }
 
-            // تحديث البيانات في الصفحة بعد النجاح بالبيانات الراجعة من السيرفر
+            // تحديث الواجهة بعد الحفظ
             const { data } = response;
             setImage(data.image);
-            setPreview(getImageUrl(data.image)); // استخدام الدالة المركزية للصور
+            setPreview(getImageUrl(data.image));
             setOldImages(data.images || []);
             setSubImages([]);
             setSubImagesPreview([]);
 
         } catch (error) {
-            // عرض رسالة الخطأ القادمة من الباك إند
             const message = error.response?.data?.detail || error.message || 'Error saving product';
             alert(message);
         } finally {
@@ -168,121 +155,198 @@ const ProductEditScreen = () => {
         }
     };
 
-    if (loading) return <div className="min-h-screen pt-40 text-center bg-dark text-white font-bold animate-pulse">Loading Product Data...</div>;
+    if (loading) return <div className="min-h-screen pt-40 text-center text-gray-500 dark:text-white font-bold animate-pulse">Loading Product Data...</div>;
 
     if (error) return (
-        <div className="min-h-screen pt-40 text-center bg-dark text-red-500">
-            <h2 className="text-2xl font-bold mb-4">Error</h2>
-            <p className="mb-4">{error}</p>
-            <Link to={goBackLink} className="bg-primary px-4 py-2 rounded text-white">Go Back</Link>
+        <div className="min-h-screen pt-40 text-center px-6">
+            <div className="bg-red-100 text-red-700 p-6 rounded-xl max-w-lg mx-auto border border-red-300">
+                <h2 className="text-2xl font-bold mb-2">Error</h2>
+                <p className="mb-4">{error}</p>
+                <Link to={goBackLink} className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition">Go Back</Link>
+            </div>
         </div>
     );
 
     return (
-        <div className="product-edit-container">
+        <div className="min-h-screen pt-28 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
             <Meta title={id ? t('editProduct') : t('createProduct')} />
 
-            {/* زر الرجوع */}
-            <button className="btn-back" onClick={() => navigate(goBackLink)}>
-                <FaArrowLeft /> {t('goBack')}
-            </button>
-
-            <form onSubmit={submitHandler} className="edit-form">
-                <h2>{id ? t('editProduct') : t('createProduct')}</h2>
-
-                {/* الصورة الأساسية والمعاينة */}
-                <div className="image-section">
-                    <div className="main-image-preview">
-                        {/* استخدام getImageUrl المركزية هنا */}
-                        <img
-                            src={preview || getImageUrl(image)}
-                            alt="Preview"
-                            onError={(e) => e.target.src = '/images/placeholder.png'}
-                        />
-                    </div>
-                    <label className="upload-label">
-                        <FaImage /> {t('uploadMainImage')}
-                        <input type="file" onChange={uploadFileHandler} hidden />
-                    </label>
-                </div>
-
-                {/* الحقول النصية */}
-                <div className="form-group">
-                    <label>{t('productName')}</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                    />
-                </div>
-
-                <div className="row">
-                    <div className="form-group col">
-                        <label>{t('price')}</label>
-                        <input
-                            type="number"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div className="form-group col">
-                        <label>{t('discountPrice')}</label>
-                        <input
-                            type="number"
-                            value={discountPrice}
-                            onChange={(e) => setDiscountPrice(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                {/* اختيار القسم (Category) */}
-                <div className="form-group">
-                    <label>{t('category')}</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value)} required>
-                        <option value="">{t('selectCategory')}</option>
-                        {categoriesList.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                                {cat.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* صور المعرض (Sub Images) */}
-                <div className="sub-images-section">
-                    <h4>{t('subImages')}</h4>
-                    <div className="images-grid">
-                        {/* الصور القديمة من السيرفر */}
-                        {oldImages.map((img) => (
-                            <div key={img.id} className="image-item">
-                                <img src={getImageUrl(img.image)} alt="sub" />
-                                <button type="button" onClick={() => deleteOldImageHandler(img.id)} className="btn-delete">
-                                    <FaTrash />
-                                </button>
-                            </div>
-                        ))}
-                        {/* معاينة الصور الجديدة المختارة */}
-                        {subImagesPreview.map((url, index) => (
-                            <div key={index} className="image-item preview">
-                                <img src={url} alt="new-preview" />
-                                <button type="button" onClick={() => removeSubImage(index)} className="btn-delete">
-                                    <FaTimes />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                    <label className="upload-label secondary">
-                        <FaImages /> {t('addMoreImages')}
-                        <input type="file" multiple onChange={uploadSubImagesHandler} hidden />
-                    </label>
-                </div>
-
-                <button type="submit" className="btn-save" disabled={loading}>
-                    {loading ? t('loading') : <><FaSave /> {t('saveProduct')}</>}
+            <div className="max-w-4xl mx-auto">
+                {/* زر الرجوع */}
+                <button 
+                    onClick={() => navigate(goBackLink)}
+                    className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary mb-6 font-bold transition"
+                >
+                    <FaArrowLeft /> {t('goBack') || "Go Back"}
                 </button>
-            </form>
+
+                <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent rounded-3xl p-6 md:p-8 shadow-lg dark:shadow-none border border-gray-200 dark:border-white/10">
+                    <h2 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-8 border-b border-gray-100 dark:border-white/10 pb-4">
+                        {id ? (t('editProduct') || "Edit Product") : (t('createProduct') || "Create Product")}
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {/* ================= القسم الأيسر: الصور ================= */}
+                        <div className="space-y-6">
+                            {/* الصورة الأساسية */}
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2">{t('mainImage') || "Main Image"}</label>
+                                <div className="relative group rounded-2xl overflow-hidden border-2 border-dashed border-gray-300 dark:border-white/20 bg-gray-50 dark:bg-dark hover:border-primary transition h-64 flex items-center justify-center">
+                                    <img
+                                        src={preview || getImageUrl(image)}
+                                        alt="Preview"
+                                        className="w-full h-full object-contain"
+                                        onError={(e) => e.target.src = '/images/placeholder.png'}
+                                    />
+                                    <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white cursor-pointer transition duration-300">
+                                        <FaImage size={30} className="mb-2" />
+                                        <span className="font-bold text-sm">{t('changeImage') || "Change Image"}</span>
+                                        <input type="file" onChange={uploadFileHandler} hidden />
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* صور المعرض (Sub Images) */}
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2">{t('galleryImages') || "Gallery Images"}</label>
+                                
+                                <div className="grid grid-cols-3 gap-3 mb-3">
+                                    {/* الصور القديمة */}
+                                    {oldImages.map((img) => (
+                                        <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 group">
+                                            <img src={getImageUrl(img.image)} alt="sub" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => deleteOldImageHandler(img.id)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-md"
+                                            >
+                                                <FaTrash size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {/* الصور الجديدة للمعاينة */}
+                                    {subImagesPreview.map((url, index) => (
+                                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-green-500/50 group">
+                                            <img src={url} alt="new-preview" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => removeSubImage(index)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition shadow-md"
+                                            >
+                                                <FaTimes size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    
+                                    {/* زر الإضافة */}
+                                    <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-white/20 flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:text-primary text-gray-400 transition bg-gray-50 dark:bg-dark">
+                                        <FaImages size={20} className="mb-1" />
+                                        <span className="text-[10px] font-bold">{t('add') || "Add"}</span>
+                                        <input type="file" multiple onChange={uploadSubImagesHandler} hidden />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ================= القسم الأيمن: البيانات ================= */}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('productName') || "Product Name"}</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-gray-900 dark:text-white transition"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('price') || "Price ($)"}</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary focus:ring-1 focus:ring-primary outline-none text-gray-900 dark:text-white transition"
+                                        value={price}
+                                        onChange={(e) => setPrice(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm text-red-500">{t('discountPrice') || "Sale Price"}</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none text-gray-900 dark:text-white transition"
+                                        value={discountPrice}
+                                        onChange={(e) => setDiscountPrice(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="flex-1">
+                                    <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('brand') || "Brand"}</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary outline-none text-gray-900 dark:text-white transition"
+                                        value={brand}
+                                        onChange={(e) => setBrand(e.target.value)}
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('stock') || "Count In Stock"}</label>
+                                    <input
+                                        type="number"
+                                        className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary outline-none text-gray-900 dark:text-white transition"
+                                        value={countInStock}
+                                        onChange={(e) => setCountInStock(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('category') || "Category"}</label>
+                                <select 
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary outline-none text-gray-900 dark:text-white transition cursor-pointer"
+                                    value={category} 
+                                    onChange={(e) => setCategory(e.target.value)} 
+                                    required
+                                >
+                                    <option value="">{t('selectCategory') || "Select Category..."}</option>
+                                    {categoriesList.map((cat) => (
+                                        <option key={cat.id} value={cat.id}>
+                                            {cat.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 dark:text-gray-300 font-bold mb-2 text-sm">{t('description') || "Description"}</label>
+                                <textarea
+                                    rows="5"
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded-xl px-4 py-3 focus:border-primary outline-none text-gray-900 dark:text-white transition"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                ></textarea>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-gray-100 dark:border-white/10 flex justify-end">
+                        <button 
+                            type="submit" 
+                            disabled={loading}
+                            className="bg-primary hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? t('processing') : <><FaSave /> {t('saveProduct') || "Save Product"}</>}
+                        </button>
+                    </div>
+
+                </form>
+            </div>
         </div>
     );
 };

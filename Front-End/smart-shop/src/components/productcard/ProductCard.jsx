@@ -2,16 +2,27 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar, FaShoppingCart, FaEye, FaTag } from 'react-icons/fa';
 import { useSettings } from '../../context/SettingsContext';
-// استدعاء الدالة المركزية للصور
-import { getImageUrl } from '../../api';
+import { getImageUrl } from '../../api'; // استدعاء الدالة المركزية للصور
+import { useCart } from '../../context/CartContext'; // 1. استدعاء هوك السلة
 
 const ProductCard = ({ product }) => {
   const { t } = useSettings();
+  const { addToCart } = useCart(); // 2. استخراج دالة الإضافة
 
   // حساب نسبة الخصم لو فيه سعر خصم
   const discountPercentage = product.discount_price > 0 
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : 0;
+
+  // 3. دالة التعامل مع الضغط على زر الإضافة
+  const addToCartHandler = (e) => {
+    // منع الانتقال لصفحة المنتج لو ضغط على الزرار (Stop Propagation)
+    e.preventDefault(); 
+    addToCart(product, 1);
+    
+    // ممكن تضيف هنا تنبيه بسيط (اختياري)
+    // alert(t('addedToCart') || "Added to cart!"); 
+  };
 
   return (
     <div className="group relative bg-white dark:bg-dark-accent rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
@@ -27,7 +38,6 @@ const ProductCard = ({ product }) => {
       <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-white/5">
         <Link to={`/product/${product.id || product._id}`}>
           <img
-            /* التعديل هنا: استخدام getImageUrl لضمان عمل الصورة أونلاين */
             src={getImageUrl(product.image)}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
@@ -40,6 +50,7 @@ const ProductCard = ({ product }) => {
           <Link 
             to={`/product/${product.id || product._id}`}
             className="p-3 bg-white text-dark rounded-full hover:bg-primary hover:text-white transition-colors duration-300 shadow-xl"
+            title={t('viewDetails') || "View Details"}
           >
             <FaEye size={18} />
           </Link>
@@ -76,9 +87,10 @@ const ProductCard = ({ product }) => {
           )}
         </div>
 
-        {/* زر الإضافة للسلة */}
+        {/* زر الإضافة للسلة (تم تفعيله) */}
         <button 
-          className="w-full mt-4 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-white text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 border border-gray-100 dark:border-white/10"
+          onClick={addToCartHandler}
+          className="w-full mt-4 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-white text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 border border-gray-100 dark:border-white/10 active:scale-95"
         >
           <FaShoppingCart /> {t('addToCart') || 'Add to Cart'}
         </button>
