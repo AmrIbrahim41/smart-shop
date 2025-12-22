@@ -275,6 +275,7 @@ export const translations = {
     confirmDeleteUser: "Are you sure you want to delete this user?",
     userDeleted: "User Deleted Successfully",
     deleteUserError: "Error deleting user",
+    searchPlaceholder: "Search products...",
   },
   
   ar: {
@@ -547,5 +548,6 @@ export const translations = {
     confirmDeleteUser: "هل أنت متأكد أنك تريد حذف هذا المستخدم؟",
     userDeleted: "تم حذف المستخدم بنجاح",
     deleteUserError: "خطأ في حذف المستخدم",
+    searchPlaceholder: "ابحث عن منتج...",
   }
 };
