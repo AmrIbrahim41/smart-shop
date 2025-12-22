@@ -80,7 +80,7 @@ const Footer = () => {
             &copy; {currentYear} SmartShop. All Rights Reserved.
           </p>
           <p className="text-gray-500 dark:text-gray-500 text-xs flex items-center gap-1">
-            Made with <FaHeart className="text-red-500" /> by <span className="text-gray-900 dark:text-white font-bold">Amr & Belal</span>
+            Made with <FaHeart className="text-red-500" /> by <span className="text-gray-900 dark:text-white font-bold">Amr Ibrahim</span>
           </p>
         </div>
       </div>
