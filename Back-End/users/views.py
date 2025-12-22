@@ -38,7 +38,7 @@ def registerUser(request):
         # 1. التأكد أن الإيميل غير مستخدم مسبقاً
         if User.objects.filter(email=data['email']).exists():
             return Response(
-                {'detail': 'هذا البريد الإلكتروني مسجل بالفعل'},
+                {'detail': 'this email is already registered'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -66,8 +66,8 @@ def registerUser(request):
         # رابط التفعيل (تأكد من وضع رابط نتفلاي الصحيح هنا)
         activation_link = f"https://smart-shop00.netlify.app/activate/{uid}/{token}/"
         
-        subject = 'تفعيل حسابك - Smart Shop'
-        message = f'أهلاً بك، يرجى الضغط على الرابط التالي لتفعيل حسابك: \n {activation_link}'
+        subject = 'actibating your account -Smart Shop'
+        message = f' welcome {user.first_name} please click the link below to activate your account:\n {activation_link}'
         
         send_mail(subject, message, settings.EMAIL_HOST_USER, [data['email']])
 
