@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiService, getImageUrl } from '../../api';
-import { FaArrowLeft, FaSave, FaCloudUploadAlt, FaTrash, FaTimes, FaBoxOpen, FaMagic, FaTag, FaDollarSign, FaLayerGroup, FaImage } from 'react-icons/fa';
+import { FaArrowLeft, FaSave, FaCloudUploadAlt, FaTrash, FaTimes, FaBoxOpen, FaMagic, FaTag, FaDollarSign, FaLayerGroup, FaImage, FaCheckCircle, FaExclamationCircle, FaBan } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
 
@@ -32,7 +32,7 @@ const ProductEditScreen = () => {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [saveLoading, setSaveLoading] = useState(false); // Loading state for save button specifically
+    const [saveLoading, setSaveLoading] = useState(false);
 
     // --- Fetch Data ---
     const fetchData = async () => {
@@ -50,7 +50,11 @@ const ProductEditScreen = () => {
                 setOldImages(data.images || []);
                 setBrand(data.brand);
                 setCountInStock(data.countInStock);
-                setCategory(data.category?.id || data.category || '');
+
+                // ✅ إصلاح القسم: التأكد من سحب الـ ID سواء كان كائن أو رقم
+                const catId = data.category?.id || data.category || '';
+                setCategory(String(catId)); // تحويل لنص لضمان التطابق
+
                 setDescription(data.description);
                 setApprovalStatus(data.approval_status);
             }
@@ -109,9 +113,13 @@ const ProductEditScreen = () => {
         formData.append('brand', brand);
         formData.append('countInStock', countInStock);
         formData.append('description', description);
-        formData.append('category', category);
+        formData.append('category', category); // إرسال القسم
 
-        if (isAdmin) formData.append('approval_status', approvalStatus);
+        // ✅ إرسال حالة الموافقة فقط لو المستخدم أدمن
+        if (isAdmin) {
+            formData.append('approval_status', approvalStatus);
+        }
+
         if (image instanceof File) formData.append('image', image);
         if (subImages.length > 0) {
             subImages.forEach((file) => formData.append('images', file));
@@ -121,15 +129,13 @@ const ProductEditScreen = () => {
             let response;
             if (id) {
                 response = await apiService.updateProduct(id, formData);
-                // alert(t('productUpdated') || 'Updated Successfully!');
             } else {
                 response = await apiService.createProduct(formData);
-                // alert(t('productCreated') || 'Created Successfully!');
                 navigate(goBackLink);
-                return; // Exit to avoid trying to use 'response' for update logic on navigation
+                return;
             }
 
-            // Refresh Data in place (Smooth UX)
+            // Refresh Data
             const { data } = response;
             setImage(data.image);
             setPreview(getImageUrl(data.image));
@@ -137,6 +143,7 @@ const ProductEditScreen = () => {
             setSubImages([]);
             setSubImagesPreview([]);
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            // alert(t('saveSuccess') || "Saved successfully!");
 
         } catch (error) {
             alert(error.response?.data?.detail || 'Error saving product');
@@ -186,7 +193,6 @@ const ProductEditScreen = () => {
                     >
                         <FaArrowLeft /> {t('cancel') || "Cancel"}
                     </button>
-                    {/* Sticky Save Button for Mobile */}
                     <button
                         onClick={submitHandler}
                         disabled={saveLoading}
@@ -215,7 +221,6 @@ const ProductEditScreen = () => {
                                 onError={(e) => e.target.src = '/images/placeholder.png'}
                             />
 
-                            {/* Overlay */}
                             <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-sm">
                                 <FaCloudUploadAlt className="text-white text-5xl mb-2 drop-shadow-md animate-bounce" />
                                 <span className="text-white font-bold bg-black/50 px-4 py-1 rounded-full text-sm">Click to Change</span>
@@ -229,7 +234,6 @@ const ProductEditScreen = () => {
                         <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><FaLayerGroup className="text-primary" /> {t('gallery') || "Gallery"}</h3>
 
                         <div className="grid grid-cols-3 gap-2">
-                            {/* Old Images */}
                             {oldImages.map((img) => (
                                 <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 dark:border-gray-700">
                                     <img src={getImageUrl(img.image)} alt="Old" className="w-full h-full object-cover" />
@@ -239,7 +243,6 @@ const ProductEditScreen = () => {
                                 </div>
                             ))}
 
-                            {/* New Previews */}
                             {subImagesPreview.map((url, index) => (
                                 <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border-2 border-primary/50">
                                     <img src={url} alt="New" className="w-full h-full object-cover" />
@@ -249,7 +252,6 @@ const ProductEditScreen = () => {
                                 </div>
                             ))}
 
-                            {/* Add Button */}
                             <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all flex flex-col items-center justify-center text-gray-400 hover:text-primary">
                                 <FaCloudUploadAlt className="text-2xl mb-1" />
                                 <span className="text-[10px] font-bold uppercase">Add</span>
@@ -262,12 +264,37 @@ const ProductEditScreen = () => {
                 {/* === Right Column (Form Details) === */}
                 <div className="lg:col-span-8 space-y-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
 
-                    {/* General Info */}
+                    {/* ✅ 1. Admin Control Card (بيظهر بس للأدمن) */}
+                    {isAdmin && (
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-white/10 dark:to-white/5 p-8 rounded-[2rem] shadow-xl border border-gray-200 dark:border-white/20 text-white">
+                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2 border-b border-white/20 pb-4">
+                                <FaCheckCircle className="text-green-400" /> Admin Controls
+                            </h2>
+                            <div>
+                                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 block">Approval Status</label>
+                                <div className="flex gap-4">
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'approved' ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="approved" checked={approvalStatus === 'approved'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaCheckCircle /> Approved
+                                    </label>
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'pending' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="pending" checked={approvalStatus === 'pending'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaExclamationCircle /> Pending
+                                    </label>
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'rejected' ? 'bg-red-500/20 border-red-500 text-red-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="rejected" checked={approvalStatus === 'rejected'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaBan /> Rejected
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 2. Basic Info */}
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
                         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Product Information</h2>
 
                         <div className="grid gap-6">
-                            {/* Name */}
                             <div className="relative group">
                                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('productName') || "Product Name"}</label>
                                 <div className="relative">
@@ -283,7 +310,6 @@ const ProductEditScreen = () => {
                                 </div>
                             </div>
 
-                            {/* Price & Discount Row */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="relative group">
                                     <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('price') || "Price"}</label>
@@ -313,7 +339,6 @@ const ProductEditScreen = () => {
                                 </div>
                             </div>
 
-                            {/* Description */}
                             <div>
                                 <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('description') || "Description"}</label>
                                 <textarea
@@ -327,7 +352,7 @@ const ProductEditScreen = () => {
                         </div>
                     </div>
 
-                    {/* Categorization & Stock */}
+                    {/* 3. Inventory & Sorting */}
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
                         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Inventory & Sorting</h2>
 
@@ -343,7 +368,8 @@ const ProductEditScreen = () => {
                                     >
                                         <option value="">Select...</option>
                                         {categoriesList.map((cat) => (
-                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                            // ✅ إصلاح: استخدام String لضمان تطابق القيمة
+                                            <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
                                         ))}
                                     </select>
                                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</div>
@@ -376,7 +402,6 @@ const ProductEditScreen = () => {
                 </div>
             </form>
 
-            {/* CSS Animation Styles (Inline for simplicity) */}
             <style>{`
                 @keyframes fadeInDown {
                     from { opacity: 0; transform: translateY(-20px); }
