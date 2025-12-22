@@ -42,19 +42,18 @@ def registerUser(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # إنشاء المستخدم الأساسي
         user = User.objects.create(
-            first_name=data["name"],
+            # 👇 التعديل هنا: استقبال الاسم الأول والأخير منفصلين
+            first_name=data.get("first_name", ""),
+            last_name=data.get("last_name", ""),
             username=data["email"],
             email=data["email"],
             password=make_password(data["password"]),
             is_active=False,
         )
 
-        # 👇👇 تحديث بيانات البروفايل (الهاتف والنوع) 👇👇
-        # (Profile بيتم إنشاؤه تلقائياً بسبب Signals، احنا بس هنعدله)
         user.profile.phone = data.get("phone", "")
-        user.profile.type = data.get("type", "customer")  # customer or vendor
+        user.profile.type = data.get("type", "customer")
         user.profile.save()
 
         # ... (باقي كود إرسال الإيميل زي ما هو بالظبط) ...

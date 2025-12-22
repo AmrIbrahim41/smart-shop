@@ -9,7 +9,10 @@ const RegisterScreen = () => {
     const { t } = useSettings();
     const navigate = useNavigate();
 
-    const [name, setName] = useState('');
+    // 👇 1. تقسيم الاسم لمتغيرين
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [type, setType] = useState('customer');
@@ -27,7 +30,7 @@ const RegisterScreen = () => {
 
     const submitHandler = async (e) => {
         e.preventDefault();
-        // التأكد من تطابق كلمة المرور
+        
         if (password !== confirmPassword) {
             setError(t('passwordsDoNotMatch') || 'Passwords do not match');
             return;
@@ -39,21 +42,26 @@ const RegisterScreen = () => {
         try {
             const config = { headers: { 'Content-Type': 'application/json' } };
             
-            // 👇 هنا التعديل المهم: ربطنا بالسيرفر الحي
+            // 👇 2. إرسال الاسم الأول والأخير منفصلين
             const { data } = await axios.post(
                 'https://Amr41.pythonanywhere.com/api/users/register/',
-                { name, email, password, phone, type },
+                { 
+                    first_name: firstName, 
+                    last_name: lastName, 
+                    email, 
+                    password, 
+                    phone, 
+                    type 
+                },
                 config
             );
 
-            // رسالة النجاح
             setMessage(t('registrationSuccess') || "Registration successful! Please check your email to activate account.");
             
             // تفريغ الحقول
-            setName(''); setEmail(''); setPassword(''); setConfirmPassword(''); setPhone('');
+            setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setConfirmPassword(''); setPhone('');
             
         } catch (err) {
-            // عرض الخطأ القادم من الباك إند
             setError(err.response?.data?.detail || err.response?.data?.message || t('registrationError') || 'Registration Error');
         }
         setLoading(false);
@@ -68,14 +76,12 @@ const RegisterScreen = () => {
                     {t('registerTitle') || "REGISTER"}
                 </h1>
                 
-                {/* رسالة الخطأ */}
                 {error && (
                     <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-4 rounded-xl mb-4 text-center dark:border-red-500/20 animate-pulse transition-colors">
                         {error}
                     </div>
                 )}
                 
-                {/* رسالة النجاح */}
                 {message && (
                     <div className="bg-green-100 border border-green-400 text-green-700 dark:bg-green-500/10 dark:text-green-400 p-6 rounded-2xl mb-6 dark:border-green-500/30 text-center transition-colors">
                         <h3 className="font-bold text-xl mb-2">🎉 {t('successRegister') || "Almost there!"}</h3>
@@ -86,17 +92,30 @@ const RegisterScreen = () => {
                 {!message && (
                     <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent p-8 rounded-3xl border border-gray-200 dark:border-white/10 space-y-4 shadow-lg dark:shadow-none transition-colors duration-300">
                         
-                        {/* Name Input */}
-                        <div className="relative group">
-                            <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="text" 
-                                placeholder={t('namePlaceholder') || "Full Name"} 
-                                value={name} 
-                                onChange={(e) => setName(e.target.value)} 
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
-                                required 
-                            />
+                        {/* 👇 3. حقل الاسم مقسوم لجزئين */}
+                        <div className="flex gap-3">
+                            <div className="relative group w-1/2">
+                                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
+                                <input 
+                                    type="text" 
+                                    placeholder={t('firstName') || "First Name"} 
+                                    value={firstName} 
+                                    onChange={(e) => setFirstName(e.target.value)} 
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
+                                    required 
+                                />
+                            </div>
+                            <div className="relative group w-1/2">
+                                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
+                                <input 
+                                    type="text" 
+                                    placeholder={t('lastName') || "Last Name"} 
+                                    value={lastName} 
+                                    onChange={(e) => setLastName(e.target.value)} 
+                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors" 
+                                    required 
+                                />
+                            </div>
                         </div>
 
                         {/* Phone Input */}

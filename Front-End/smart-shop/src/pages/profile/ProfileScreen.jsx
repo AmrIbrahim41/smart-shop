@@ -186,7 +186,7 @@ const ProfileScreen = () => {
                         value={lastName} 
                         onChange={(e) => setLastName(e.target.value)} 
                         className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 rounded p-2 text-gray-900 dark:text-white text-sm focus:border-primary outline-none transition-colors" 
-                        placeholder="Doe"
+                        placeholder="lastName"
                     />
                   </div>
               </div>
