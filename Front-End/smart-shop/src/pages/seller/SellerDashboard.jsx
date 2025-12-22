@@ -46,7 +46,7 @@ const SellerDashboard = () => {
     try {
         // إنشاء منتج جديد فارغ ثم التوجيه للتعديل
         const response = await api.post('/api/products/create/', {});
-        navigate(`/product/${response.data.id}/edit`, { state: { isNew: true } });
+        navigate(`/seller/product/${response.data.id}/edit`, { state: { isNew: true } });
     } catch (err) {
         alert(t('createError') || 'Error creating product');
     }
