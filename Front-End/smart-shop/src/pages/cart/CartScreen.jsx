@@ -70,7 +70,8 @@ const CartScreen = () => {
                   <p className="text-primary font-bold mt-1">${item.price}</p>
                 </div>
 
-                {/* التحكم في الكمية */}
+                // ... نفس الاستيرادات السابقة
+                {/* التحكم في الكمية داخل السلة */}
                 <div className="flex items-center bg-gray-100 dark:bg-dark rounded-lg border border-gray-200 dark:border-white/10 transition-colors">
                   <button
                     onClick={() => addToCart(item, Math.max(1, item.qty - 1))}
@@ -78,15 +79,24 @@ const CartScreen = () => {
                   >
                     <FaMinus size={10} />
                   </button>
+
                   <span className="w-8 text-center text-gray-900 dark:text-white font-bold text-sm">{item.qty}</span>
+
                   <button
-                    onClick={() => addToCart(item, item.qty + 1)}
-                    className="p-3 text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition"
+                    onClick={() => {
+                      // التحقق: هل الكمية الحالية في السلة أقل من المتاح في المخزن؟
+                      if (item.qty < item.countInStock) {
+                        addToCart(item, item.qty + 1);
+                      } else {
+                        // تنبيه المستخدم أن هذا هو أقصى حد متوفر
+                        alert(`${t('maxStockReached') || "Sorry, only"} ${item.countInStock} ${t('unitsAvailable') || "units available in stock."}`);
+                      }
+                    }}
+                    className={`p-3 transition ${item.qty >= item.countInStock ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed' : 'text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white'}`}
                   >
                     <FaPlus size={10} />
                   </button>
                 </div>
-
                 {/* زر الحذف من السلة */}
                 <button
                   onClick={() => removeFromCart(item.id)}

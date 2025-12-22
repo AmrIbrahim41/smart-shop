@@ -1,71 +1,73 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaStar, FaShoppingCart, FaEye, FaTag } from 'react-icons/fa';
+import { FaStar, FaShoppingCart, FaEye, FaTag, FaExclamationTriangle } from 'react-icons/fa';
 import { useSettings } from '../../context/SettingsContext';
-import { getImageUrl } from '../../api'; // استدعاء الدالة المركزية للصور
-import { useCart } from '../../context/CartContext'; // 1. استدعاء هوك السلة
+import { getImageUrl } from '../../api';
+import { useCart } from '../../context/CartContext';
 
 const ProductCard = ({ product }) => {
   const { t } = useSettings();
-  const { addToCart } = useCart(); // 2. استخراج دالة الإضافة
+  const { addToCart } = useCart();
 
-  // حساب نسبة الخصم لو فيه سعر خصم
-  const discountPercentage = product.discount_price > 0 
+  const isOutOfStock = product.countInStock === 0;
+
+  const discountPercentage = product.discount_price > 0
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : 0;
 
-  // 3. دالة التعامل مع الضغط على زر الإضافة
   const addToCartHandler = (e) => {
-    // منع الانتقال لصفحة المنتج لو ضغط على الزرار (Stop Propagation)
-    e.preventDefault(); 
+    e.preventDefault();
+    if (isOutOfStock) return; // منع الإضافة لو الكمية صفر
     addToCart(product, 1);
-    
-    // ممكن تضيف هنا تنبيه بسيط (اختياري)
-    // alert(t('addedToCart') || "Added to cart!"); 
   };
 
   return (
-    <div className="group relative bg-white dark:bg-dark-accent rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-      
-      {/* شارة الخصم (Badge) */}
-      {product.discount_price > 0 && (
-        <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg animate-bounce">
-          {discountPercentage}% {t('off') || 'OFF'}
-        </div>
-      )}
+    <div className="group relative bg-white dark:bg-dark-accent rounded-3xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-3">
 
-      {/* صورة المنتج */}
+      {/* شارة الخصم أو نفاذ الكمية */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+        {product.discount_price > 0 && !isOutOfStock && (
+          <div className="bg-red-500 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg animate-pulse">
+            {discountPercentage}% {t('off') || 'OFF'}
+          </div>
+        )}
+        {isOutOfStock && (
+          <div className="bg-gray-800 text-white text-[10px] font-black px-2 py-1 rounded-lg shadow-lg flex items-center gap-1">
+            <FaExclamationTriangle className="text-yellow-400" /> {t('outOfStock') || 'SOLD OUT'}
+          </div>
+        )}
+      </div>
+
+      {/* صورة المنتج مع أنميشن Zoom */}
       <div className="relative aspect-square overflow-hidden bg-gray-50 dark:bg-white/5">
         <Link to={`/product/${product.id || product._id}`}>
           <img
             src={getImageUrl(product.image)}
             alt={product.name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 ${isOutOfStock ? 'grayscale opacity-50' : ''}`}
             onError={(e) => { e.target.src = '/images/placeholder.png'; }}
           />
         </Link>
 
-        {/* أزرار سريعة تظهر عند التحويم (Hover) */}
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
-          <Link 
+        {/* Overlay الأزرار */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3 backdrop-blur-sm">
+          <Link
             to={`/product/${product.id || product._id}`}
-            className="p-3 bg-white text-dark rounded-full hover:bg-primary hover:text-white transition-colors duration-300 shadow-xl"
-            title={t('viewDetails') || "View Details"}
+            className="p-4 bg-white text-dark rounded-full hover:bg-primary hover:text-white transition-all duration-300 shadow-xl transform translate-y-4 group-hover:translate-y-0"
           >
-            <FaEye size={18} />
+            <FaEye size={20} />
           </Link>
         </div>
       </div>
 
-      {/* تفاصيل المنتج */}
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-1">
-          <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+      <div className="p-5">
+        <div className="flex justify-between items-start mb-2">
+          <span className="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full flex items-center gap-1">
             <FaTag size={8} /> {product.category_name || t('general')}
           </span>
-          <div className="flex items-center text-yellow-400 text-[10px]">
+          <div className="flex items-center text-yellow-400 text-[10px] font-bold">
             <FaStar />
-            <span className="ms-1 text-gray-500 dark:text-gray-400">{product.rating || '0.0'}</span>
+            <span className="ms-1 text-gray-500">{product.rating || '0.0'}</span>
           </div>
         </div>
 
@@ -75,24 +77,31 @@ const ProductCard = ({ product }) => {
           </h3>
         </Link>
 
-        {/* السعر */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-4">
           {product.discount_price > 0 ? (
             <>
-              <span className="text-lg font-black text-primary">${product.discount_price}</span>
+              <span className="text-xl font-black text-primary">${product.discount_price}</span>
               <span className="text-xs text-gray-400 line-through">${product.price}</span>
             </>
           ) : (
-            <span className="text-lg font-black text-primary">${product.price}</span>
+            <span className="text-xl font-black text-primary">${product.price}</span>
           )}
         </div>
 
-        {/* زر الإضافة للسلة (تم تفعيله) */}
-        <button 
+        {/* زر الإضافة للسلة - يتغير شكله عند نفاذ الكمية */}
+        <button
           onClick={addToCartHandler}
-          className="w-full mt-4 bg-gray-50 dark:bg-white/5 hover:bg-primary hover:text-white text-gray-700 dark:text-gray-300 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 border border-gray-100 dark:border-white/10 active:scale-95"
+          disabled={isOutOfStock}
+          className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md active:scale-95 ${isOutOfStock
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200 shadow-none'
+              : 'bg-dark dark:bg-white text-white dark:text-dark hover:bg-primary dark:hover:bg-primary hover:text-white'
+            }`}
         >
-          <FaShoppingCart /> {t('addToCart') || 'Add to Cart'}
+          {isOutOfStock ? (
+            <>{t('outOfStock') || 'Sold Out'}</>
+          ) : (
+            <><FaShoppingCart /> {t('addToCart') || 'Add to Cart'}</>
+          )}
         </button>
       </div>
     </div>
