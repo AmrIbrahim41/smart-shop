@@ -69,8 +69,6 @@ const CartScreen = () => {
                   </Link>
                   <p className="text-primary font-bold mt-1">${item.price}</p>
                 </div>
-
-                // ... نفس الاستيرادات السابقة
                 {/* التحكم في الكمية داخل السلة */}
                 <div className="flex items-center bg-gray-100 dark:bg-dark rounded-lg border border-gray-200 dark:border-white/10 transition-colors">
                   <button
