@@ -31,7 +31,7 @@ const HomeScreen = () => {
               <Card>
                 <Card.Img 
                   variant="top" 
-                  src={`http://127.0.0.1:8000${product.image}`} 
+                  src={product.image} 
                 />
                 <Card.Body>
                   <Card.Title>{product.name}</Card.Title>
