@@ -192,17 +192,25 @@ def forgot_password(request):
     email = data.get("email", "")
 
     try:
+        # البحث عن المستخدم عن طريق الإيميل
         user = User.objects.get(email=email)
 
+        # توليد الرموز الأمنية (Token & UID) لمرة واحدة
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-        reset_link = f"http://localhost:5173/reset-password/{uid}/{token}/"
+        # 👈 التعديل الجوهري هنا: استبدل الرابط برابط موقعك على Netlify
+        # مثال: https://smart-shop00.netlify.app
+        domain = "https://smart-shop00.netlify.app" 
+        reset_link = f"{domain}/reset-password/{uid}/{token}/"
 
-        message = f"Hello {user.first_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nIf you didn't request this, ignore this email."
+        # محتوى رسالة البريد الإلكتروني
+        subject = "Password Reset Request - Smart Shop"
+        message = f"Hello {user.first_name},\n\nYou requested to reset your password. Click the link below to set a new one:\n\n{reset_link}\n\nThis link will expire soon. If you didn't request this, please ignore this email."
 
+        # إرسال الإيميل باستخدام إعدادات SMTP الخاصة بك
         send_mail(
-            "Password Reset Request",
+            subject,
             message,
             settings.EMAIL_HOST_USER,
             [email],
@@ -210,12 +218,15 @@ def forgot_password(request):
         )
 
         return Response(
-            {"details": "Email sent successfully! Check your inbox (or console)."}
+            {"details": "Reset link sent! Please check your email inbox."}
         )
 
     except User.DoesNotExist:
-        return Response({"details": "Email sent successfully! Check your inbox."})
-
+        # أمنياً: نرجع رسالة نجاح حتى لو الإيميل مش موجود عشان محدش يعرف الإيميلات المسجلة
+        return Response({"details": "If this email exists, a reset link has been sent."})
+    
+    except Exception as e:
+        return Response({"detail": f"Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
 # 5. دالة تأكيد الباسورد الجديد
 @api_view(["POST"])
