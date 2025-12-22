@@ -1,239 +1,421 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-// استدعاء api عشان نكلم الباك إند مباشرة، واستدعاء دالة الصور
-import api, { getImageUrl } from '../../api';
-import { FaEdit, FaTrash, FaUser, FaImage, FaTag } from 'react-icons/fa';
+import { useParams, useNavigate } from 'react-router-dom';
+import { apiService, getImageUrl } from '../../api';
+import { FaArrowLeft, FaSave, FaCloudUploadAlt, FaTrash, FaTimes, FaBoxOpen, FaMagic, FaTag, FaDollarSign, FaLayerGroup, FaImage, FaCheckCircle, FaExclamationCircle, FaBan } from 'react-icons/fa';
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
 
-const ProductListScreen = () => {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
+const ProductEditScreen = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
     const { t } = useSettings();
+
     const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+    const isAdmin = userInfo?.isAdmin;
+    const goBackLink = isAdmin ? "/admin/productlist" : "/dashboard";
 
-    // دالة جلب كل المنتجات (للأدمن)
-    const fetchProducts = async () => {
+    // --- State Variables ---
+    const [name, setName] = useState('');
+    const [price, setPrice] = useState(0);
+    const [discountPrice, setDiscountPrice] = useState(0);
+    const [image, setImage] = useState('');
+    const [preview, setPreview] = useState('');
+    const [subImages, setSubImages] = useState([]);
+    const [subImagesPreview, setSubImagesPreview] = useState([]);
+    const [oldImages, setOldImages] = useState([]);
+    const [brand, setBrand] = useState('');
+    const [countInStock, setCountInStock] = useState(0);
+    const [category, setCategory] = useState('');
+    const [categoriesList, setCategoriesList] = useState([]);
+    const [description, setDescription] = useState('');
+    const [approvalStatus, setApprovalStatus] = useState('pending');
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [saveLoading, setSaveLoading] = useState(false);
+
+    // --- Fetch Data ---
+    const fetchData = async () => {
         try {
-            // 👇 التعديل: طلبنا /api/products/ عشان نجيب كل حاجة
-            const { data } = await api.get('/api/products/');
+            const { data: categories } = await apiService.getCategories();
+            setCategoriesList(categories);
 
-            // التعامل مع البيانات سواء جاية في مصفوفة مباشرة أو داخل كائن
-            setProducts(data.products || data);
-            setLoading(false);
+            if (id) {
+                const { data } = await apiService.getProductDetails(id);
+                setName(data.name);
+                setPrice(data.price);
+                setDiscountPrice(data.discount_price || 0);
+                setImage(data.image);
+                setPreview(getImageUrl(data.image));
+                setOldImages(data.images || []);
+                setBrand(data.brand);
+                setCountInStock(data.countInStock);
+
+                // ✅ إصلاح القسم: التأكد من سحب الـ ID سواء كان كائن أو رقم
+                const catId = data.category?.id || data.category || '';
+                setCategory(String(catId)); // تحويل لنص لضمان التطابق
+
+                setDescription(data.description);
+                setApprovalStatus(data.approval_status);
+            }
         } catch (err) {
-            setError(err.response?.data?.detail || err.message || "Failed to fetch products");
+            setError("Failed to load data");
+        } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        if (userInfo && userInfo.isAdmin) {
-            fetchProducts();
-        } else {
-            navigate('/login');
-        }
-    }, [navigate]);
+        fetchData();
+    }, [id]);
 
-    const deleteHandler = async (id) => {
-        if (window.confirm(t('confirmDeleteProduct') || 'Are you sure you want to delete this product?')) {
+    // --- Handlers ---
+    const uploadFileHandler = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImage(file);
+            setPreview(URL.createObjectURL(file));
+        }
+    };
+
+    const uploadSubImagesHandler = (e) => {
+        const files = Array.from(e.target.files);
+        setSubImages(prev => [...prev, ...files]);
+        const newPreviews = files.map(file => URL.createObjectURL(file));
+        setSubImagesPreview(prev => [...prev, ...newPreviews]);
+        e.target.value = '';
+    };
+
+    const removeSubImage = (index) => {
+        setSubImages(prev => prev.filter((_, i) => i !== index));
+        setSubImagesPreview(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const deleteOldImageHandler = async (imageId) => {
+        if (window.confirm('Delete this image?')) {
             try {
-                // حذف المنتج
-                await api.delete(`/api/products/delete/${id}/`);
-                alert(t('productDeleted') || "Product Deleted!");
-                // تحديث القائمة بعد الحذف
-                fetchProducts();
+                await apiService.deleteProductImage(imageId);
+                setOldImages(prev => prev.filter(img => img.id !== imageId));
             } catch (error) {
-                alert(error.response?.data?.detail || t('deleteProductError') || "Error deleting product");
+                alert('Error deleting image');
             }
         }
     };
 
+    const submitHandler = async (e) => {
+        e.preventDefault();
+        setSaveLoading(true);
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('price', price);
+        formData.append('discount_price', discountPrice);
+        formData.append('brand', brand);
+        formData.append('countInStock', countInStock);
+        formData.append('description', description);
+        formData.append('category', category); // إرسال القسم
+
+        // ✅ إرسال حالة الموافقة فقط لو المستخدم أدمن
+        if (isAdmin) {
+            formData.append('approval_status', approvalStatus);
+        }
+
+        if (image instanceof File) formData.append('image', image);
+        if (subImages.length > 0) {
+            subImages.forEach((file) => formData.append('images', file));
+        }
+
+        try {
+            let response;
+            if (id) {
+                response = await apiService.updateProduct(id, formData);
+            } else {
+                response = await apiService.createProduct(formData);
+                navigate(goBackLink);
+                return;
+            }
+
+            // Refresh Data
+            const { data } = response;
+            setImage(data.image);
+            setPreview(getImageUrl(data.image));
+            setOldImages(data.images || []);
+            setSubImages([]);
+            setSubImagesPreview([]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // alert(t('saveSuccess') || "Saved successfully!");
+
+        } catch (error) {
+            alert(error.response?.data?.detail || 'Error saving product');
+        } finally {
+            setSaveLoading(false);
+        }
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 transition-colors">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400 font-bold animate-pulse">Loading Workspace...</p>
+        </div>
+    );
+
+    if (error) return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+            <div className="text-center">
+                <FaBoxOpen className="text-6xl text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Something went wrong</h2>
+                <p className="text-gray-500 mb-6">{error}</p>
+                <button onClick={() => navigate(goBackLink)} className="px-6 py-2 bg-primary text-white rounded-full hover:bg-orange-600 transition">Return Back</button>
+            </div>
+        </div>
+    );
+
     return (
-        <div className="min-h-screen pt-28 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
-            <Meta title={t('productList') || "PRODUCTS LIST"} />
+        <div className="min-h-screen pt-28 pb-20 bg-gray-50 dark:bg-gray-900 transition-colors duration-500 ease-in-out">
+            <Meta title={id ? t('editProduct') : t('createProduct')} />
 
-            <div className="max-w-7xl mx-auto">
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-8 uppercase transition-colors">
-                    {t('allProducts') || "ALL PRODUCTS (ADMIN DASHBOARD)"}
-                </h1>
+            {/* Header Section */}
+            <div className="max-w-7xl mx-auto px-6 mb-10 flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-down">
+                <div>
+                    <h1 className="text-4xl font-black text-gray-900 dark:text-white flex items-center gap-3">
+                        {id ? <FaMagic className="text-primary" /> : <FaBoxOpen className="text-primary" />}
+                        {id ? (t('editProduct') || "Edit Product") : (t('createProduct') || "New Product")}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
+                        {id ? "Refine your product details to perfection." : "Bring a new item to your collection."}
+                    </p>
+                </div>
 
-                {loading ? (
-                    <div className="text-gray-600 dark:text-white text-center font-bold animate-pulse py-20">
-                        {t('loadingProducts') || "Loading Products..."}
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => navigate(goBackLink)}
+                        className="px-6 py-3 rounded-2xl font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center gap-2"
+                    >
+                        <FaArrowLeft /> {t('cancel') || "Cancel"}
+                    </button>
+                    <button
+                        onClick={submitHandler}
+                        disabled={saveLoading}
+                        className="px-8 py-3 rounded-2xl font-bold text-white bg-gradient-to-r from-primary to-orange-600 hover:shadow-lg hover:shadow-primary/40 hover:-translate-y-1 transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                        {saveLoading ? <span className="animate-pulse">Saving...</span> : <><FaSave /> {t('saveChanges') || "Save Changes"}</>}
+                    </button>
+                </div>
+            </div>
+
+            <form onSubmit={submitHandler} className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                {/* === Left Column (Main Image & Gallery) === */}
+                <div className="lg:col-span-4 space-y-6 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+
+                    {/* Main Image Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20 relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-orange-500"></div>
+                        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><FaImage className="text-primary" /> {t('mainImage') || "Main Image"}</h3>
+
+                        <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 dark:border-gray-600 group-hover:border-primary transition-colors bg-gray-50 dark:bg-gray-900/50">
+                            <img
+                                src={preview || getImageUrl(image)}
+                                alt="Main Preview"
+                                className="w-full h-full object-contain p-2 transition-transform duration-700 group-hover:scale-105"
+                                onError={(e) => e.target.src = '/images/placeholder.png'}
+                            />
+
+                            <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 backdrop-blur-sm">
+                                <FaCloudUploadAlt className="text-white text-5xl mb-2 drop-shadow-md animate-bounce" />
+                                <span className="text-white font-bold bg-black/50 px-4 py-1 rounded-full text-sm">Click to Change</span>
+                                <input type="file" onChange={uploadFileHandler} className="hidden" />
+                            </label>
+                        </div>
                     </div>
-                ) : error ? (
-                    <div className="text-red-500 text-center font-bold py-20 bg-white dark:bg-dark-accent rounded-xl border border-red-200">
-                        {error}
-                    </div>
-                ) : (
-                    <>
-                        {/* ======================================================= */}
-                        {/* 1. عرض البطاقات للموبايل (Mobile View - Cards)        */}
-                        {/* ======================================================= */}
-                        <div className="md:hidden space-y-4">
-                            {products.map((product) => (
-                                <div key={product.id} className="bg-white dark:bg-dark-accent p-4 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm transition-colors">
-                                    <div className="flex gap-4">
-                                        {/* صورة المنتج */}
-                                        <div className="w-20 h-20 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 flex-shrink-0 flex items-center justify-center">
-                                            {product.image ? (
-                                                <img
-                                                    src={getImageUrl(product.image)}
-                                                    alt={product.name}
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                                                />
-                                            ) : (
-                                                <FaImage className="text-gray-400 text-2xl" />
-                                            )}
-                                            <FaImage className="text-gray-400 text-2xl hidden" />
-                                        </div>
 
-                                        {/* تفاصيل المنتج */}
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="font-bold text-gray-900 dark:text-white truncate text-sm">{product.name}</h3>
-                                            <p className="text-primary font-black text-lg">${product.price}</p>
+                    {/* Gallery Card */}
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h3 className="font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2"><FaLayerGroup className="text-primary" /> {t('gallery') || "Gallery"}</h3>
 
-                                            <div className="flex flex-wrap gap-2 mt-2">
-                                                {/* حالة الموافقة */}
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${product.approval_status === 'approved'
-                                                        ? 'bg-green-100 text-green-600 dark:bg-green-500/20'
-                                                        : product.approval_status === 'rejected'
-                                                            ? 'bg-red-100 text-red-600 dark:bg-red-500/20'
-                                                            : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20'
-                                                    }`}>
-                                                    {t(product.approval_status) || product.approval_status || 'pending'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* معلومات إضافية (البائع والقسم) */}
-                                    <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-100 dark:border-white/5">
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 truncate">
-                                            <FaUser size={10} /> {product.user_name || product.user || 'Admin'}
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 truncate">
-                                            <FaTag size={10} /> {product.category_name || t('noCategory')}
-                                        </div>
-                                    </div>
-
-                                    {/* أزرار التحكم */}
-                                    <div className="flex gap-2 pt-3 mt-3 border-t border-gray-100 dark:border-white/5">
-                                        <button
-                                            onClick={() => navigate(`/admin/product/${product.id}/edit`)} // لاحظ: استخدمنا مسار الأدمن للتعديل
-                                            className="flex-1 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition"
-                                        >
-                                            <FaEdit /> {t('edit')}
-                                        </button>
-                                        <button
-                                            onClick={() => deleteHandler(product.id)}
-                                            className="w-12 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 py-2.5 rounded-xl flex items-center justify-center transition hover:bg-red-100 dark:hover:bg-red-900/20"
-                                        >
-                                            <FaTrash />
-                                        </button>
-                                    </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {oldImages.map((img) => (
+                                <div key={img.id} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 dark:border-gray-700">
+                                    <img src={getImageUrl(img.image)} alt="Old" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => deleteOldImageHandler(img.id)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                        <FaTrash />
+                                    </button>
                                 </div>
                             ))}
-                        </div>
 
-                        {/* ======================================================= */}
-                        {/* 2. عرض الجدول للشاشات الكبيرة (Desktop View - Table)  */}
-                        {/* ======================================================= */}
-                        <div className="hidden md:block overflow-x-auto bg-white dark:bg-dark-accent rounded-2xl border border-gray-200 dark:border-white/10 shadow-lg transition-colors">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 uppercase text-xs">
-                                        <th className="p-4 text-center">ID</th>
-                                        <th className="p-4 text-center">{t('image') || "IMAGE"}</th>
-                                        <th className="p-4">{t('name') || "NAME"}</th>
-                                        <th className="p-4">{t('price') || "PRICE"}</th>
-                                        <th className="p-4">{t('seller') || "SELLER"}</th>
-                                        <th className="p-4 text-center">{t('status') || "STATUS"}</th>
-                                        <th className="p-4">{t('category') || "CATEGORY"}</th>
-                                        <th className="p-4 text-center">{t('actions') || "ACTIONS"}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-white/10 text-sm text-gray-700 dark:text-gray-300">
-                                    {products.map((product) => (
-                                        <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                                            <td className="p-4 font-bold text-center">#{product.id}</td>
-                                            <td className="p-4">
-                                                <div className="w-12 h-12 mx-auto rounded-lg overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-                                                    {product.image ? (
-                                                        <img
-                                                            src={getImageUrl(product.image)}
-                                                            alt={product.name}
-                                                            className="w-full h-full object-cover"
-                                                            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                                                        />
-                                                    ) : (
-                                                        <FaImage className="text-gray-400" />
-                                                    )}
-                                                    <FaImage className="text-gray-400 hidden" />
-                                                </div>
-                                            </td>
-                                            <td className="p-4 font-bold text-gray-900 dark:text-white truncate max-w-[200px]" title={product.name}>{product.name}</td>
-                                            <td className="p-4 text-primary font-bold">${product.price}</td>
-                                            <td className="p-4">
-                                                <div className="flex items-center gap-2">
-                                                    <FaUser className="text-gray-400" size={12} />
-                                                    <span className="truncate max-w-[120px]">{product.user_name || product.user || 'Admin'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase inline-block min-w-[80px] text-center ${product.approval_status === 'approved'
-                                                        ? 'bg-green-100 text-green-600 dark:bg-green-500/20'
-                                                        : product.approval_status === 'rejected'
-                                                            ? 'bg-red-100 text-red-600 dark:bg-red-500/20'
-                                                            : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-500/20'
-                                                    }`}>
-                                                    {t(product.approval_status) || product.approval_status || 'pending'}
-                                                </span>
-                                            </td>
-                                            <td className="p-4">
-                                                <span className="bg-gray-100 dark:bg-white/10 px-2 py-1 rounded text-xs text-gray-600 dark:text-gray-300 font-bold whitespace-nowrap">
-                                                    {product.category_name || t('noCategory')}
-                                                </span>
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button
-                                                        onClick={() => navigate(`/admin/product/${product.id}/edit`)}
-                                                        className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition"
-                                                        title={t('edit')}
-                                                    >
-                                                        <FaEdit size={18} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => deleteHandler(product.id)}
-                                                        className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition"
-                                                        title={t('delete')}
-                                                    >
-                                                        <FaTrash size={18} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                            {subImagesPreview.map((url, index) => (
+                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border-2 border-primary/50">
+                                    <img src={url} alt="New" className="w-full h-full object-cover" />
+                                    <button type="button" onClick={() => removeSubImage(index)} className="absolute inset-0 bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                        <FaTimes />
+                                    </button>
+                                </div>
+                            ))}
 
-                        {products.length === 0 && (
-                            <div className="p-10 text-center text-gray-500 dark:text-gray-400 font-bold bg-white dark:bg-dark-accent rounded-2xl border border-gray-200 dark:border-white/10 mt-4">
-                                {t('noProductsFound') || "No products found."}
+                            <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary hover:bg-primary/5 cursor-pointer transition-all flex flex-col items-center justify-center text-gray-400 hover:text-primary">
+                                <FaCloudUploadAlt className="text-2xl mb-1" />
+                                <span className="text-[10px] font-bold uppercase">Add</span>
+                                <input type="file" multiple onChange={uploadSubImagesHandler} className="hidden" />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                {/* === Right Column (Form Details) === */}
+                <div className="lg:col-span-8 space-y-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+
+                    {/* ✅ 1. Admin Control Card (بيظهر بس للأدمن) */}
+                    {isAdmin && (
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-white/10 dark:to-white/5 p-8 rounded-[2rem] shadow-xl border border-gray-200 dark:border-white/20 text-white">
+                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2 border-b border-white/20 pb-4">
+                                <FaCheckCircle className="text-green-400" /> Admin Controls
+                            </h2>
+                            <div>
+                                <label className="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 block">Approval Status</label>
+                                <div className="flex gap-4">
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'approved' ? 'bg-green-500/20 border-green-500 text-green-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="approved" checked={approvalStatus === 'approved'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaCheckCircle /> Approved
+                                    </label>
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'pending' ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="pending" checked={approvalStatus === 'pending'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaExclamationCircle /> Pending
+                                    </label>
+                                    <label className={`cursor-pointer flex items-center gap-2 px-6 py-3 rounded-xl border-2 transition-all ${approvalStatus === 'rejected' ? 'bg-red-500/20 border-red-500 text-red-400' : 'border-gray-600 hover:border-gray-500'}`}>
+                                        <input type="radio" name="status" value="rejected" checked={approvalStatus === 'rejected'} onChange={(e) => setApprovalStatus(e.target.value)} className="hidden" />
+                                        <FaBan /> Rejected
+                                    </label>
+                                </div>
                             </div>
-                        )}
-                    </>
-                )}
-            </div>
+                        </div>
+                    )}
+
+                    {/* 2. Basic Info */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Product Information</h2>
+
+                        <div className="grid gap-6">
+                            <div className="relative group">
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('productName') || "Product Name"}</label>
+                                <div className="relative">
+                                    <FaTag className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                        placeholder="e.g. Modern Leather Sofa"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="relative group">
+                                    <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('price') || "Price"}</label>
+                                    <div className="relative">
+                                        <FaDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        <input
+                                            type="number"
+                                            value={price}
+                                            onChange={(e) => setPrice(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="relative group">
+                                    <label className="text-xs font-bold text-red-500/80 uppercase tracking-wider mb-2 block">{t('discountPrice') || "Sale Price"}</label>
+                                    <div className="relative">
+                                        <FaDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-red-400 group-focus-within:text-red-500 transition-colors" />
+                                        <input
+                                            type="number"
+                                            value={discountPrice}
+                                            onChange={(e) => setDiscountPrice(e.target.value)}
+                                            className="w-full pl-12 pr-4 py-4 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl focus:ring-2 focus:ring-red-500/50 focus:border-red-500 outline-none transition-all text-red-600 dark:text-red-400 font-bold placeholder-red-200"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('description') || "Description"}</label>
+                                <textarea
+                                    rows="4"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white resize-none"
+                                    placeholder="Tell your customers about this product..."
+                                ></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Inventory & Sorting */}
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 dark:shadow-none border border-white/20">
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">Inventory & Sorting</h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('category') || "Category"}</label>
+                                <div className="relative">
+                                    <select
+                                        value={category}
+                                        onChange={(e) => setCategory(e.target.value)}
+                                        className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold cursor-pointer appearance-none"
+                                        required
+                                    >
+                                        <option value="">Select...</option>
+                                        {categoriesList.map((cat) => (
+                                            // ✅ إصلاح: استخدام String لضمان تطابق القيمة
+                                            <option key={cat.id} value={String(cat.id)}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">▼</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('brand') || "Brand"}</label>
+                                <input
+                                    type="text"
+                                    value={brand}
+                                    onChange={(e) => setBrand(e.target.value)}
+                                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">{t('stock') || "Stock"}</label>
+                                <input
+                                    type="number"
+                                    value={countInStock}
+                                    onChange={(e) => setCountInStock(e.target.value)}
+                                    className="w-full px-4 py-4 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-gray-900 dark:text-white font-semibold"
+                                    required
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+
+            <style>{`
+                @keyframes fadeInDown {
+                    from { opacity: 0; transform: translateY(-20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-fade-in-down { animation: fadeInDown 0.6s ease-out forwards; }
+                .animate-fade-in-up { animation: fadeInUp 0.6s ease-out forwards; opacity: 0; }
+            `}</style>
         </div>
     );
 };
 
-export default ProductListScreen;
+export default ProductEditScreen;
