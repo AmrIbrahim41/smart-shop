@@ -31,54 +31,85 @@ class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
 
 
-@api_view(['POST'])
+# أضف هذه الدالة في ملف views.py إذا كانت ناقصة
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@authentication_classes([])  # إلغاء فحص التوكن لأن اليوزر لسه مسجلش دخول
+def activateUser(request, uid, token):
+    try:
+        user_id = force_str(urlsafe_base64_decode(uid))
+        user = User.objects.get(pk=user_id)
+
+        if default_token_generator.check_token(user, token):
+            user.is_active = True
+            user.save()
+            return Response(
+                {"details": "Account activated successfully! You can login now."}
+            )
+        else:
+            return Response(
+                {"detail": "Invalid or expired token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    except Exception as e:
+        return Response(
+            {"detail": "Invalid token or user ID"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(["POST"])
 def registerUser(request):
     data = request.data
     try:
         # 1. التأكد أن الإيميل غير مستخدم مسبقاً
-        if User.objects.filter(email=data['email']).exists():
+        if User.objects.filter(email=data["email"]).exists():
             return Response(
-                {'detail': 'this email is already registered'},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": "this email is already registered"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # 2. إنشاء المستخدم وجعل الـ username هو الـ email
         user = User.objects.create(
-            first_name=data.get('first_name', ''),
-            last_name=data.get('last_name', ''),
-            username=data['email'],  # 👈 هنا السر: اليوزرنيم = الإيميل
-            email=data['email'],
-            password=make_password(data['password']),
-            is_active=False, # الحساب غير نشط حتى يتم تفعيل الإيميل
+            first_name=data.get("first_name", ""),
+            last_name=data.get("last_name", ""),
+            username=data["email"],  # 👈 هنا السر: اليوزرنيم = الإيميل
+            email=data["email"],
+            password=make_password(data["password"]),
+            is_active=False,  # الحساب غير نشط حتى يتم تفعيل الإيميل
         )
 
         # 3. تحديث بيانات البروفايل الإضافية (موبايل، نوع الحساب)
         # ملاحظة: بروفايل اليوزر يتم إنشاؤه تلقائياً عبر الـ signals في models.py
         profile = user.profile
-        profile.phone = data.get('phone', '')
-        profile.type = data.get('type', 'customer')
+        profile.phone = data.get("phone", "")
+        profile.type = data.get("type", "customer")
         profile.save()
 
         # 4. كود إرسال إيميل التفعيل (كما هو في ملفك)
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
-        
+
         # رابط التفعيل (تأكد من وضع رابط نتفلاي الصحيح هنا)
         activation_link = f"https://smart-shop00.netlify.app/activate/{uid}/{token}/"
-        
-        subject = 'actibating your account -Smart Shop'
-        message = f' welcome {user.first_name} please click the link below to activate your account:\n {activation_link}'
-        
-        send_mail(subject, message, settings.EMAIL_HOST_USER, [data['email']])
+
+        subject = "actibating your account -Smart Shop"
+        message = f" welcome {user.first_name} please click the link below to activate your account:\n {activation_link}"
+
+        send_mail(subject, message, settings.EMAIL_HOST_USER, [data["email"]])
 
         return Response(
-            {'details': "account created successfully, please check your email to activate your account."},
-            status=status.HTTP_201_CREATED
+            {
+                "details": "account created successfully, please check your email to activate your account."
+            },
+            status=status.HTTP_201_CREATED,
         )
 
     except Exception as e:
-        print(f"Error: {str(e)}") # عشان يظهرلك الخطأ في terminal السيرفر
-        return Response({'detail': 'account creation failed'}, status=status.HTTP_400_BAD_REQUEST)
+        print(f"Error: {str(e)}")  # عشان يظهرلك الخطأ في terminal السيرفر
+        return Response(
+            {"detail": "account creation failed"}, status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 # 3. دالة جلب بروفايل المستخدم (كانت ناقصة في الكود اللي بعته، ضفتها للأمان)
@@ -201,7 +232,7 @@ def forgot_password(request):
 
         # 👈 التعديل الجوهري هنا: استبدل الرابط برابط موقعك على Netlify
         # مثال: https://smart-shop00.netlify.app
-        domain = "https://smart-shop00.netlify.app" 
+        domain = "https://smart-shop00.netlify.app"
         reset_link = f"{domain}/reset-password/{uid}/{token}/"
 
         # محتوى رسالة البريد الإلكتروني
@@ -217,16 +248,19 @@ def forgot_password(request):
             fail_silently=False,
         )
 
-        return Response(
-            {"details": "Reset link sent! Please check your email inbox."}
-        )
+        return Response({"details": "Reset link sent! Please check your email inbox."})
 
     except User.DoesNotExist:
         # أمنياً: نرجع رسالة نجاح حتى لو الإيميل مش موجود عشان محدش يعرف الإيميلات المسجلة
-        return Response({"details": "If this email exists, a reset link has been sent."})
-    
+        return Response(
+            {"details": "If this email exists, a reset link has been sent."}
+        )
+
     except Exception as e:
-        return Response({"detail": f"Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"detail": f"Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST
+        )
+
 
 # 5. دالة تأكيد الباسورد الجديد
 @api_view(["POST"])
