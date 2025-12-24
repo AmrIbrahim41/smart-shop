@@ -14,7 +14,7 @@ const OrderListScreen = () => {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const { data } = await api.get(ENDPOINTS.ORDERS);
+                const { data } = await api.get(ENDPOINTS.ORDERS_LIST);
                 setOrders(data);
                 setLoading(false);
             } catch (error) {
@@ -28,7 +28,7 @@ const OrderListScreen = () => {
     const deleteHandler = async (id) => {
         if (window.confirm(t('confirmDeleteOrder') || 'Are you sure you want to delete this order?')) {
             try {
-                await api.delete(`${ENDPOINTS.ORDERS}${id}/`);
+                await api.delete(ENDPOINTS.DELETE_ORDER(id));
                 setOrders(orders.filter((order) => (order._id || order.id) !== id));
             } catch (error) {
                 alert(t('errorDelete') || "Error deleting order");
