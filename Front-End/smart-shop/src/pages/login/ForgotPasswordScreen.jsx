@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-// تعديل: استدعاء api بدلاً من axios المباشر
 import api from '../../api'; 
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
+import { FaEnvelope, FaPaperPlane, FaArrowLeft } from 'react-icons/fa';
 
 const ForgotPasswordScreen = () => {
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
-    const [isError, setIsError] = useState(false); // حالة لمعرفة نوع الرسالة (خطأ أم نجاح)
-
+    const [isError, setIsError] = useState(false);
     const { t } = useSettings();
 
     const submitHandler = async (e) => {
@@ -19,12 +18,7 @@ const ForgotPasswordScreen = () => {
         setIsError(false);
 
         try {
-            // استخدام api مع المسار النسبي فقط
-            const { data } = await api.post(
-                '/api/users/forgot-password/', 
-                { email }
-            );
-
+            const { data } = await api.post('/api/users/forgot-password/', { email });
             setMessage(data.details || 'Check your email for a reset link!');
             setIsError(false);
         } catch (error) {
@@ -35,58 +29,69 @@ const ForgotPasswordScreen = () => {
     };
 
     return (
-        <div className="min-h-screen pt-28 px-6 bg-gray-50 dark:bg-dark flex justify-center transition-colors duration-300">
+        <div className="min-h-screen relative flex items-center justify-center px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-500 overflow-hidden">
             <Meta title={t('forgotPassword') || "Forgot Password"} />
             
-            <div className="w-full max-w-md">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 uppercase text-center">
-                    {t('forgotPassword') || "FORGOT PASSWORD"}
-                </h1>
-                
-                <p className="text-gray-500 dark:text-gray-400 text-center mb-8 text-sm">
-                    {t('resetInstructions') || "No worries! Enter your email and we'll send you a link to reset your password."}
-                </p>
+            {/* Shapes */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                <div className="absolute bottom-[-5%] left-[20%] w-72 h-72 bg-primary/20 rounded-full blur-[100px] animate-pulse"></div>
+            </div>
 
-                {message && (
-                    <div className={`p-4 rounded-xl text-sm mb-6 text-center border animate-pulse ${
-                        isError 
-                        ? 'bg-red-100 border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' 
-                        : 'bg-green-100 border-green-400 text-green-700 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'
-                    }`}>
-                        {message}
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] shadow-2xl p-8 md:p-10 transition-all">
+                    
+                    <div className="text-center mb-8">
+                        <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4 text-2xl animate-bounce">
+                            <FaPaperPlane />
+                        </div>
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
+                            {t('forgotPassword') || "Reset Password"}
+                        </h1>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                            {t('resetInstructions') || "Enter your email and we'll send you a link to reset your password."}
+                        </p>
                     </div>
-                )}
 
-                <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent p-8 rounded-2xl border border-gray-200 dark:border-white/10 shadow-lg dark:shadow-none transition-colors duration-300">
-                    
-                    <label className="text-gray-600 dark:text-gray-400 block mb-2 font-bold text-sm">
-                        {t('enterEmail') || "Enter your email address"}
-                    </label>
-                    
-                    <input 
-                        type="email" 
-                        value={email} 
-                        onChange={(e) => setEmail(e.target.value)} 
-                        className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 rounded-xl text-gray-900 dark:text-white mb-6 focus:border-primary outline-none transition-all duration-300 focus:ring-1 focus:ring-primary shadow-inner" 
-                        placeholder="example@mail.com"
-                        required 
-                    />
-                    
-                    <button 
-                        type="submit" 
-                        disabled={loading} 
-                        className="w-full bg-primary hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg hover:shadow-primary/30 disabled:bg-gray-400 disabled:cursor-not-allowed uppercase active:scale-95"
-                    >
-                        {loading ? (t('sending') || 'Sending...') : (t('sendResetLink') || 'SEND RESET LINK')}
-                    </button>
-                </form>
+                    {message && (
+                        <div className={`p-4 rounded-2xl text-sm font-bold mb-6 text-center animate-pulse border ${
+                            isError 
+                            ? 'bg-red-50 border-red-100 text-red-600 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400' 
+                            : 'bg-green-50 border-green-100 text-green-600 dark:bg-green-500/10 dark:border-green-500/20 dark:text-green-400'
+                        }`}>
+                            {message}
+                        </div>
+                    )}
 
-                <div className="mt-8 text-center">
-                    <p className="text-gray-500 text-sm">
-                        <a href="/login" className="text-primary font-bold hover:underline">
-                            &larr; {t('backToLogin') || "Back to Login"}
+                    <form onSubmit={submitHandler} className="space-y-6">
+                        <div className="space-y-2 group">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">{t('enterEmail') || "Email Address"}</label>
+                            <div className="relative">
+                                <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                <input 
+                                    type="email" 
+                                    value={email} 
+                                    onChange={(e) => setEmail(e.target.value)} 
+                                    className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-11 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold placeholder-gray-300 dark:placeholder-gray-600"
+                                    placeholder="example@mail.com"
+                                    required 
+                                />
+                            </div>
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="w-full bg-gradient-to-r from-primary to-orange-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-primary/30 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed uppercase"
+                        >
+                            {loading ? (t('sending') || 'Sending Link...') : (t('sendResetLink') || 'SEND RESET LINK')}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 text-center">
+                        <a href="/login" className="inline-flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold hover:text-primary transition-colors text-sm">
+                            <FaArrowLeft /> {t('backToLogin') || "Back to Login"}
                         </a>
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>

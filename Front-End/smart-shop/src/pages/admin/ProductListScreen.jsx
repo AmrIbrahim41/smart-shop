@@ -64,7 +64,7 @@ const ProductListScreen = () => {
                         {t('allProducts') || "ALL PRODUCTS (ADMIN)"}
                     </h1>
                     <button 
-                        onClick={() => navigate('/seller/product/create')}
+                        onClick={() => navigate('/admin/product/create')}
                         className="w-full sm:w-auto bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg text-sm"
                     >
                         + Create Product

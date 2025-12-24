@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// التأكد من استدعاء api من الملف المركزي
 import api from '../../api';
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext';
+import { FaLock, FaCheckCircle } from 'react-icons/fa';
 
 const ResetPasswordScreen = () => {
     const { uid, token } = useParams();
@@ -28,14 +28,11 @@ const ResetPasswordScreen = () => {
 
         setLoading(true);
         try {
-            // التعديل: إضافة /api في بداية الرابط لضمان الوصول للمسار الصحيح
             const { data } = await api.post(`/api/users/reset-password/${uid}/${token}/`, {
                 password, confirmPassword
             });
 
             setMessage(t('passwordResetSuccess') || data.details || 'Password reset successful');
-
-            // توجيه لصفحة الدخول بعد 3 ثواني
             setTimeout(() => navigate('/login'), 3000);
         } catch (err) {
             setError(err.response?.data?.detail || t('invalidToken') || 'Invalid or Expired Token');
@@ -45,72 +42,78 @@ const ResetPasswordScreen = () => {
     };
 
     return (
-        <div className="min-h-screen pt-28 px-6 bg-gray-50 dark:bg-dark flex justify-center transition-colors duration-300">
+        <div className="min-h-screen relative flex items-center justify-center px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-500 overflow-hidden">
             <Meta title={t('setNewPassword') || "Set New Password"} />
 
-            <div className="w-full max-w-md">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-6 uppercase transition-colors text-center">
-                    {t('newPasswordTitle') || "NEW PASSWORD"}
-                </h1>
-
-                {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 p-4 rounded-xl mb-6 text-sm font-bold text-center animate-pulse">
-                        ⚠️ {error}
-                    </div>
-                )}
-
-                {message && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20 p-4 rounded-xl mb-6 text-sm font-bold text-center">
-                        ✅ {message}
-                    </div>
-                )}
-
-                <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent p-8 rounded-3xl border border-gray-200 dark:border-white/10 shadow-lg dark:shadow-none transition-colors duration-300">
-
-                    <div className="mb-4">
-                        <label className="block text-gray-600 dark:text-gray-400 text-sm font-bold mb-2">
-                            {t('newPasswordPlaceholder') || "New Password"}
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="********"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 rounded-xl text-gray-900 dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 shadow-inner"
-                            required
-                        />
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] shadow-2xl p-8 md:p-10 transition-all">
+                    
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
+                            {t('newPasswordTitle') || "New Password"}
+                        </h1>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                            {t('newPasswordSubtitle') || "Create a strong password for your account."}
+                        </p>
                     </div>
 
-                    <div className="mb-6">
-                        <label className="block text-gray-600 dark:text-gray-400 text-sm font-bold mb-2">
-                            {t('confirmPasswordPlaceholder') || "Confirm Password"}
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="********"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 rounded-xl text-gray-900 dark:text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-300 shadow-inner"
-                            required
-                        />
-                    </div>
+                    {error && (
+                        <div className="bg-red-50 border border-red-100 text-red-600 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20 p-4 rounded-2xl mb-6 text-sm font-bold text-center animate-bounce">
+                            ⚠️ {error}
+                        </div>
+                    )}
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-primary hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition shadow-lg hover:shadow-primary/30 disabled:bg-gray-400 disabled:cursor-not-allowed uppercase active:scale-95"
-                    >
-                        {loading ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {t('processing') || 'Processing...'}
-                            </span>
-                        ) : (t('resetPasswordBtn') || 'RESET PASSWORD')}
-                    </button>
-                </form>
+                    {message && (
+                        <div className="bg-green-50 border border-green-100 text-green-600 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20 p-6 rounded-2xl mb-6 text-center">
+                            <FaCheckCircle className="mx-auto text-4xl mb-2" />
+                            <h3 className="font-bold text-lg">Successful!</h3>
+                            <p className="text-sm">{message}</p>
+                            <p className="text-xs text-gray-400 mt-2">Redirecting to login...</p>
+                        </div>
+                    )}
+
+                    {!message && (
+                        <form onSubmit={submitHandler} className="space-y-6">
+                            <div className="space-y-2 group">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">{t('newPasswordPlaceholder') || "New Password"}</label>
+                                <div className="relative">
+                                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-11 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold placeholder-gray-300 dark:placeholder-gray-600"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 group">
+                                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">{t('confirmPasswordPlaceholder') || "Confirm Password"}</label>
+                                <div className="relative">
+                                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-4 pl-11 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold placeholder-gray-300 dark:placeholder-gray-600"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full bg-primary hover:bg-orange-600 text-white font-black py-4 rounded-2xl transition shadow-lg shadow-primary/30 disabled:opacity-70 disabled:cursor-not-allowed uppercase transform hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                {loading ? (t('processing') || 'Processing...') : (t('resetPasswordBtn') || 'RESET PASSWORD')}
+                            </button>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

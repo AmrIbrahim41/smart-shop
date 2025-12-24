@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; 
-// استدعاء api فقط (مش محتاجين axios ولا config)
 import api from '../../api'; 
-import { FaTimes, FaCheck, FaTrash, FaUser, FaStore, FaEnvelope, FaIdBadge, FaUsersCog } from 'react-icons/fa'; 
+import { FaTimes, FaCheck, FaTrash, FaUser, FaStore, FaEnvelope, FaIdBadge, FaUsersCog, FaSearch } from 'react-icons/fa'; 
 import Meta from '../../components/tapheader/Meta';
 import { useSettings } from '../../context/SettingsContext'; 
 
@@ -17,8 +16,6 @@ const UserListScreen = () => {
 
   const fetchUsers = async () => {
       try {
-        // التعديل: استخدام api.get مباشرة بدون headers يدوية
-        // وتعديل المسار ليكون /api/users/
         const { data } = await api.get('/api/users/');
         setUsers(data);
         setLoading(false);
@@ -37,112 +34,96 @@ const UserListScreen = () => {
   }, [navigate]);
 
   const deleteHandler = async (id) => {
-    if(window.confirm(t('confirmDeleteUser') || 'Are you sure you want to delete this user?')) {
+    if(window.confirm(t('confirmDeleteUser') || 'Are you sure?')) {
         try {
-            // التعديل: الحذف باستخدام api.delete مباشرة
             await api.delete(`/api/users/delete/${id}/`);
-            
-            alert(t('userDeleted') || "User Deleted Successfully");
-            // تحديث القائمة محلياً بدل إعادة طلب السيرفر (أسرع)
+            alert(t('userDeleted') || "User Deleted");
             setUsers(users.filter(user => user.id !== id)); 
         } catch (error) {
-            alert(t('deleteUserError') || "Error deleting user");
+            alert("Error deleting user");
         }
     }
   };
 
   const filteredUsers = users.filter(user => {
-      // منطق تحديد نوع المستخدم (بائع، أدمن، عميل)
       const userType = user.profile ? user.profile.type : (user.isAdmin ? 'admin' : 'customer');
       if (filterType === 'vendor') return userType === 'vendor';
       return userType === 'customer' || userType === 'admin'; 
   });
 
   return (
-    <div className="min-h-screen pt-28 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
-      <Meta title={t('userList') || "USERS LIST"} />
+    <div className="min-h-screen pt-28 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-gray-900 transition-colors duration-500">
+      <Meta title={t('userList') || "Users List"} />
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white mb-8 border-l-4 border-primary pl-4 uppercase transition-colors flex items-center gap-2">
-            <FaUsersCog className="text-primary" /> {t('usersManagement') || "USERS MANAGEMENT"}
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-8 flex items-center gap-3 uppercase tracking-tight">
+            <span className="p-3 bg-primary/10 text-primary rounded-2xl"><FaUsersCog /></span> 
+            {t('usersManagement') || "Users Management"}
         </h1>
 
-        {/* أزرار التبديل (Tabs) */}
-        <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-8">
+        {/* Tabs */}
+        <div className="flex bg-gray-200 dark:bg-gray-800 p-1 rounded-2xl w-full max-w-md mb-8 mx-auto md:mx-0">
             <button 
                 onClick={() => setFilterType('customer')}
-                className={`flex-1 flex items-center justify-center gap-3 px-4 py-4 rounded-2xl font-bold transition-all duration-300 shadow-sm ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
                     filterType === 'customer' 
-                    ? 'bg-primary text-white shadow-lg shadow-orange-500/30 scale-[1.02]' 
-                    : 'bg-white dark:bg-dark-accent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 border border-gray-200 dark:border-white/10'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md' 
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
             >
-                <div className={`p-2 rounded-lg ${filterType === 'customer' ? 'bg-white/20' : 'bg-gray-100 dark:bg-dark'}`}>
-                    <FaUser size={18} />
-                </div>
-                <span className="whitespace-nowrap text-sm md:text-base uppercase tracking-wide">
-                    {t('customersAndAdmins') || "Customers & Admins"}
-                </span>
+                <FaUser /> {t('customers') || "Customers"}
             </button>
 
             <button 
                 onClick={() => setFilterType('vendor')}
-                className={`flex-1 flex items-center justify-center gap-3 px-4 py-4 rounded-2xl font-bold transition-all duration-300 shadow-sm ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
                     filterType === 'vendor' 
-                    ? 'bg-primary text-white shadow-lg shadow-orange-500/30 scale-[1.02]' 
-                    : 'bg-white dark:bg-dark-accent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 border border-gray-200 dark:border-white/10'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md' 
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
             >
-                <div className={`p-2 rounded-lg ${filterType === 'vendor' ? 'bg-white/20' : 'bg-gray-100 dark:bg-dark'}`}>
-                    <FaStore size={18} />
-                </div>
-                <span className="whitespace-nowrap text-sm md:text-base uppercase tracking-wide">
-                    {t('sellersVendors') || "Sellers (Vendors)"}
-                </span>
+                <FaStore /> {t('vendors') || "Vendors"}
             </button>
         </div>
 
         {loading ? (
-          <div className="text-gray-600 dark:text-white text-center font-bold animate-pulse py-20">{t('loadingUsers') || "Loading Users..."}</div>
+          <div className="text-center py-20 font-bold animate-pulse text-primary">Loading Users...</div>
         ) : (
           <>
-            {/* 1. عرض الموبايل (Cards View) */}
+            {/* Mobile Cards */}
             <div className="md:hidden space-y-4">
                 {filteredUsers.length === 0 ? (
-                    <div className="p-10 text-center text-gray-500 dark:text-gray-400 font-bold bg-white dark:bg-dark-accent rounded-2xl border border-gray-200 dark:border-white/10">
-                        {t('noUsersFound')}
-                    </div>
+                    <div className="text-center text-gray-500 py-10">No users found</div>
                 ) : (
                     filteredUsers.map((user) => (
-                        <div key={user.id} className="bg-white dark:bg-dark-accent p-5 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm relative">
-                            <button 
-                                onClick={() => deleteHandler(user.id)} 
-                                className="absolute top-4 right-4 text-red-500 p-2 bg-red-50 dark:bg-red-500/10 rounded-lg"
-                            >
-                                <FaTrash size={14} />
-                            </button>
-
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold">
+                        <div key={user.id} className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm relative">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-full flex items-center justify-center font-black text-lg text-gray-600 dark:text-gray-300">
                                     {user.name[0].toUpperCase()}
                                 </div>
-                                <div className="min-w-0">
-                                    <h3 className="font-bold text-gray-900 dark:text-white truncate pr-6">{user.name}</h3>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 dark:text-white">{user.name}</h3>
                                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
                                         user.isAdmin ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
                                     }`}>
                                         {user.isAdmin ? 'Admin' : (user.profile?.type || 'Customer')}
                                     </span>
                                 </div>
+                                <button 
+                                    onClick={() => deleteHandler(user.id)} 
+                                    className="absolute top-5 right-5 text-red-400 hover:text-red-600 p-2 bg-red-50 dark:bg-red-900/10 rounded-lg"
+                                >
+                                    <FaTrash size={14} />
+                                </button>
                             </div>
 
-                            <div className="space-y-2 mb-2">
-                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                    <FaEnvelope className="shrink-0" />
-                                    <a href={`mailto:${user.email}`} className="text-primary hover:underline truncate">{user.email}</a>
+                            <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400 font-medium bg-gray-50 dark:bg-gray-900/50 p-3 rounded-2xl">
+                                <div className="flex items-center gap-2">
+                                    <FaEnvelope className="text-gray-400" />
+                                    <a href={`mailto:${user.email}`} className="hover:text-primary truncate">{user.email}</a>
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono">
-                                    <FaIdBadge className="shrink-0" />
-                                    <span>{user.id}</span>
+                                <div className="flex items-center gap-2 font-mono text-xs">
+                                    <FaIdBadge className="text-gray-400" />
+                                    <span>ID: {user.id}</span>
                                 </div>
                             </div>
                         </div>
@@ -150,52 +131,52 @@ const UserListScreen = () => {
                 )}
             </div>
 
-            {/* 2. عرض الكمبيوتر (Table View) */}
-            <div className="hidden md:block overflow-x-auto bg-white dark:bg-dark-accent rounded-xl border border-gray-200 dark:border-white/10 shadow-lg transition-colors">
+            {/* Desktop Table */}
+            <div className="hidden md:block bg-white dark:bg-gray-800 rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
                 <table className="w-full text-left border-collapse">
                 <thead>
-                    <tr className="bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 uppercase text-xs">
-                    <th className="p-4">{t('id') || "ID"}</th>
-                    <th className="p-4">{t('name') || "NAME"}</th>
-                    <th className="p-4">{t('email') || "EMAIL"}</th>
-                    <th className="p-4 text-center">{t('type') || "TYPE"}</th> 
-                    <th className="p-4 text-center">{t('admin') || "ADMIN"}</th>
-                    <th className="p-4 text-right"></th>
+                    <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 uppercase text-xs font-bold tracking-wider">
+                        <th className="p-6">User</th>
+                        <th className="p-6">Email</th>
+                        <th className="p-6 text-center">Type</th> 
+                        <th className="p-6 text-center">Admin</th>
+                        <th className="p-6 text-right">Action</th>
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-white/10 text-sm text-gray-700 dark:text-gray-300 transition-colors">
+                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                     {filteredUsers.length === 0 ? (
-                        <tr><td colSpan="6" className="p-10 text-center font-bold text-gray-500">{t('noUsersFound')}</td></tr>
+                        <tr><td colSpan="6" className="p-10 text-center font-bold text-gray-500">No users found</td></tr>
                     ) : (
                         filteredUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                            <td className="p-4 text-xs font-mono text-gray-400">{user.id}</td>
-                            <td className="p-4 font-bold text-gray-900 dark:text-white">{user.name}</td>
-                            <td className="p-4 truncate max-w-[200px]"><a href={`mailto:${user.email}`} className="text-blue-600 dark:text-primary hover:underline">{user.email}</a></td>
-                            
-                            <td className="p-4 text-center">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition duration-200">
+                            <td className="p-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center font-bold text-gray-600 dark:text-gray-300">
+                                        {user.name[0].toUpperCase()}
+                                    </div>
+                                    <span className="font-bold text-gray-900 dark:text-white">{user.name}</span>
+                                </div>
+                            </td>
+                            <td className="p-6 font-medium text-gray-600 dark:text-gray-400">
+                                <a href={`mailto:${user.email}`} className="hover:text-primary transition">{user.email}</a>
+                            </td>
+                            <td className="p-6 text-center">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                                     (user.profile?.type === 'vendor') ? 'bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
                                 }`}>
-                                    {user.profile?.type || t('customer')}
+                                    {user.profile?.type || 'Customer'}
                                 </span>
                             </td>
-
-                            <td className="p-4 text-center">
-                            {user.isAdmin ? (
-                                <FaCheck className="text-green-500 mx-auto" />
-                            ) : (
-                                <FaTimes className="text-red-500 mx-auto" />
-                            )}
+                            <td className="p-6 text-center">
+                                {user.isAdmin ? <FaCheck className="text-green-500 mx-auto"/> : <FaTimes className="text-gray-300 dark:text-gray-600 mx-auto"/>}
                             </td>
-
-                            <td className="p-4 text-right">
+                            <td className="p-6 text-right">
                                 <button 
                                     onClick={() => deleteHandler(user.id)} 
-                                    className="bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-500 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 dark:hover:text-white p-2 rounded-lg transition"
+                                    className="text-red-400 hover:text-red-600 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 p-2.5 rounded-xl transition"
                                     title={t('delete')}
                                 >
-                                    <FaTrash size={16} />
+                                    <FaTrash />
                                 </button>
                             </td>
                         </tr>

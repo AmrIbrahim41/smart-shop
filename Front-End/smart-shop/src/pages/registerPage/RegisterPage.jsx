@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import Meta from '../../components/tapheader/Meta';
-import { FaPhone, FaUserTag, FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaPhone, FaUserTag, FaUser, FaEnvelope, FaLock, FaArrowRight } from 'react-icons/fa';
 import { useSettings } from '../../context/SettingsContext';
-import api from '../../api'; // 👈 ضيف السطر ده هنا
+import api from '../../api';
 
 const RegisterScreen = () => {
     const { t } = useSettings();
     const navigate = useNavigate();
 
-    // 👇 1. تقسيم الاسم لمتغيرين
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
     const [type, setType] = useState('customer');
@@ -32,15 +29,14 @@ const RegisterScreen = () => {
     const submitHandler = async (e) => {
         e.preventDefault();
         if (password !== confirmPassword) {
-            setError('كلمات المرور غير متطابقة');
+            setError('Passwords do not match');
             return;
         }
 
         try {
             setLoading(true);
-            // إرسال البيانات للباك إند
             const { data } = await api.post('/api/users/register/', {
-                'first_name': firstName, // 👈 تأكد من تطابق الأسماء مع الباك إند
+                'first_name': firstName,
                 'last_name': lastName,
                 'email': email,
                 'password': password,
@@ -48,146 +44,189 @@ const RegisterScreen = () => {
                 'type': type
             });
 
-            setMessage(data.details); // رسالة نجاح (افحص بريدك)
+            setMessage(data.details);
             setLoading(false);
         } catch (err) {
-            setError(err.response && err.response.data.detail
-                ? err.response.data.detail
-                : err.message);
+            setError(err.response && err.response.data.detail ? err.response.data.detail : err.message);
             setLoading(false);
         }
     };
+
     return (
-        <div className="min-h-screen pt-28 px-6 bg-gray-50 dark:bg-dark flex justify-center transition-colors duration-300">
+        <div className="min-h-screen relative flex items-center justify-center py-20 px-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-500 overflow-hidden">
             <Meta title={t('registerTitle') || "Register"} />
 
-            <div className="w-full max-w-md">
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-6 uppercase text-center transition-colors">
-                    {t('registerTitle') || "REGISTER"}
-                </h1>
+            {/* Background Decoration */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-orange-500/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+            </div>
 
-                {error && (
-                    <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-500/10 dark:text-red-400 p-4 rounded-xl mb-4 text-center dark:border-red-500/20 animate-pulse transition-colors">
-                        {error}
+            <div className="relative z-10 w-full max-w-lg">
+                <div className="bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] shadow-2xl p-8 md:p-10 transition-all duration-300">
+                    
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight uppercase">
+                            {t('registerTitle') || "Create Account"}
+                        </h1>
+                        <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">
+                            {t('registerSubtitle') || "Join us and start your journey today"}
+                        </p>
                     </div>
-                )}
 
-                {message && (
-                    <div className="bg-green-100 border border-green-400 text-green-700 dark:bg-green-500/10 dark:text-green-400 p-6 rounded-2xl mb-6 dark:border-green-500/30 text-center transition-colors">
-                        <h3 className="font-bold text-xl mb-2">🎉 {t('successRegister') || "Almost there!"}</h3>
-                        <p>{message}</p>
-                    </div>
-                )}
+                    {error && (
+                        <div className="bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-6 text-center text-sm font-bold animate-bounce">
+                            ⚠️ {error}
+                        </div>
+                    )}
 
-                {!message && (
-                    <form onSubmit={submitHandler} className="bg-white dark:bg-dark-accent p-8 rounded-3xl border border-gray-200 dark:border-white/10 space-y-4 shadow-lg dark:shadow-none transition-colors duration-300">
-
-                        {/* 👇 3. حقل الاسم مقسوم لجزئين */}
-                        <div className="flex gap-3">
-                            <div className="relative group w-1/2">
-                                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder={t('firstName') || "First Name"}
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                    required
-                                />
+                    {message ? (
+                        <div className="bg-green-50 dark:bg-green-500/10 border border-green-100 dark:border-green-500/20 text-green-700 dark:text-green-400 p-8 rounded-3xl text-center">
+                            <h3 className="font-bold text-2xl mb-2">🎉 {t('successRegister') || "Verify Email!"}</h3>
+                            <p className="font-medium">{message}</p>
+                            <Link to="/login" className="mt-6 inline-block bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition shadow-lg">
+                                {t('loginNow') || "Go to Login"}
+                            </Link>
+                        </div>
+                    ) : (
+                        <form onSubmit={submitHandler} className="space-y-5">
+                            
+                            {/* Names Row */}
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1 space-y-2 group">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('firstName') || "First Name"}</label>
+                                    <div className="relative">
+                                        <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                            placeholder="John"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex-1 space-y-2 group">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('lastName') || "Last Name"}</label>
+                                    <div className="relative">
+                                        <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        <input
+                                            type="text"
+                                            value={lastName}
+                                            onChange={(e) => setLastName(e.target.value)}
+                                            className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                            placeholder="Doe"
+                                            required
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="relative group w-1/2">
-                                <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder={t('lastName') || "Last Name"}
-                                    value={lastName}
-                                    onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-10 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                    required
-                                />
+
+                            {/* Contact Info */}
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('phone') || "Phone"}</label>
+                                <div className="relative">
+                                    <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="text"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                        placeholder="+1 234 567 890"
+                                        required
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Phone Input */}
-                        <div className="relative group">
-                            <FaPhone className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="text"
-                                placeholder={t('phonePlaceholder') || "Phone Number"}
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                required
-                            />
-                        </div>
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('email') || "Email"}</label>
+                                <div className="relative">
+                                    <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                        placeholder="name@example.com"
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                        {/* Email Input */}
-                        <div className="relative group">
-                            <FaEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="email"
-                                placeholder={t('emailPlaceholder') || "Email Address"}
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                required
-                            />
-                        </div>
+                            {/* Type Selector */}
+                            <div className="p-1 bg-gray-100 dark:bg-gray-900/50 rounded-2xl flex border border-gray-200 dark:border-gray-700">
+                                <button
+                                    type="button"
+                                    onClick={() => setType('customer')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all duration-300 ${
+                                        type === 'customer' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    <FaUserTag /> {t('buyer') || "Buyer"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setType('vendor')}
+                                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all duration-300 ${
+                                        type === 'vendor' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    <FaUserTag /> {t('seller') || "Seller"}
+                                </button>
+                            </div>
 
-                        {/* Account Type Selector */}
-                        <div className="flex gap-4 items-center bg-gray-50 dark:bg-dark p-3 rounded-xl border border-gray-300 dark:border-white/10 transition-colors">
-                            <FaUserTag className="text-gray-400 dark:text-gray-500" />
-                            <label className="text-gray-600 dark:text-gray-400 text-sm font-bold whitespace-nowrap">{t('iAmA') || "I am a"}:</label>
-                            <select
-                                value={type}
-                                onChange={(e) => setType(e.target.value)}
-                                className="bg-transparent text-gray-900 dark:text-white outline-none flex-1 cursor-pointer font-bold"
+                            {/* Passwords */}
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('password') || "Password"}</label>
+                                <div className="relative">
+                                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 group">
+                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider ml-1">{t('confirmPassword') || "Confirm"}</label>
+                                <div className="relative">
+                                    <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                    <input
+                                        type="password"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="w-full bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-2xl py-3 pl-10 pr-4 text-gray-900 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-sm"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="w-full group bg-gradient-to-r from-primary to-orange-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-primary/30 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-4"
                             >
-                                <option value="customer" className="bg-white dark:bg-dark text-gray-900 dark:text-white">{t('buyer') || "Buyer (Customer)"}</option>
-                                <option value="vendor" className="bg-white dark:bg-dark text-gray-900 dark:text-white">{t('seller') || "Seller (Vendor)"}</option>
-                            </select>
-                        </div>
+                                {loading ? (t('processing') || "Creating Account...") : (
+                                    <>
+                                        {t('registerBtn') || "CREATE ACCOUNT"} <FaArrowRight className="group-hover:translate-x-1 transition-transform"/>
+                                    </>
+                                )}
+                            </button>
 
-                        {/* Password Input */}
-                        <div className="relative group">
-                            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="password"
-                                placeholder={t('passwordPlaceholder') || "Password"}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                required
-                            />
-                        </div>
-
-                        {/* Confirm Password Input */}
-                        <div className="relative group">
-                            <FaLock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-primary transition-colors" />
-                            <input
-                                type="password"
-                                placeholder={t('confirmPasswordPlaceholder') || "Confirm Password"}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-gray-50 dark:bg-dark border border-gray-300 dark:border-white/10 p-3 pl-12 rounded-xl text-gray-900 dark:text-white focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-                                required
-                            />
-                        </div>
-
-                        {/* Register Button */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed uppercase"
-                        >
-                            {loading ? (t('processing') || 'Processing...') : (t('registerBtn') || 'REGISTER')}
-                        </button>
-
-                        <div className="text-gray-600 dark:text-gray-400 text-sm text-center transition-colors">
-                            {t('haveAccount') || "Have an Account?"} <Link to="/login" className="text-primary font-bold hover:text-dark dark:hover:text-white transition-colors ml-1">{t('login') || "Login"}</Link>
-                        </div>
-                    </form>
-                )}
+                            <div className="text-center pt-4 border-t border-gray-100 dark:border-white/5">
+                                <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+                                    {t('haveAccount') || "Already have an account?"} <Link to="/login" className="text-primary font-bold hover:underline ml-1">{t('login') || "Login here"}</Link>
+                                </p>
+                            </div>
+                        </form>
+                    )}
+                </div>
             </div>
         </div>
     );

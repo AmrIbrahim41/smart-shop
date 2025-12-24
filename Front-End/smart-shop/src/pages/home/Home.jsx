@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FaThLarge } from 'react-icons/fa';
+import { FaThLarge, FaSearch, FaFilter } from 'react-icons/fa';
 import Paginate from '../../components/paginate/Paginate';
 import ProductCarousel from '../../components/slider/ProductCarousel';
 import Meta from '../../components/tapheader/Meta';
@@ -18,7 +18,6 @@ const HomeScreen = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-
   const { t } = useSettings();
 
   const searchParams = new URLSearchParams(location.search);
@@ -29,11 +28,9 @@ const HomeScreen = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data } = await apiService.getCategories(); // استخدام الخدمة المركزية
+        const { data } = await apiService.getCategories();
         setCategories(data);
-      } catch (error) {
-        console.log("Error fetching categories:", error);
-      }
+      } catch (error) { console.log(error); }
     };
     fetchCategories();
   }, []);
@@ -42,127 +39,98 @@ const HomeScreen = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // بناء رابط الاستعلام (Query String) بشكل يدوي لضمان الدقة
         const query = `?keyword=${keyword}&page=${pageNumber}&category=${categoryId}`;
-
-        // نستخدم api المباشر هنا لأن getProducts في الخدمة لا تأخذ بارامترات حالياً
         const { data } = await api.get(`${ENDPOINTS.PRODUCTS}${query}`);
-
         setProducts(data.products);
         setPage(data.page);
         setPages(data.pages);
         setLoading(false);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setLoading(false);
-      }
+      } catch (error) { setLoading(false); }
     };
     fetchProducts();
-  }, [keyword, pageNumber, categoryId]); // الفلترة هتشتغل أول ما أي قيمة تتغير
+  }, [keyword, pageNumber, categoryId]);
 
   const handleCategoryClick = (id) => {
-    if (!id) {
-      navigate('/');
-    } else {
-      navigate(`/?category=${id}`);
-    }
+    navigate(!id ? '/' : `/?category=${id}`);
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-10 px-4 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
+    // تم تقليل الـ Padding العلوي للموبايل (pt-20) وزيادته للكمبيوتر
+    <div className="min-h-screen pt-20 md:pt-24 pb-16 px-2 md:px-6 bg-gray-50 dark:bg-dark transition-colors duration-300">
+      <Meta title={keyword ? "Search Results" : "Home | SmartShop"} />
 
-      {/* ديناميكية العنوان بناءً على البحث أو الفلترة */}
-      {!keyword && !categoryId ? (
-        <Meta title={t('welcomeTitle') || "Welcome to Smart Shop"} />
-      ) : (
-        <Meta title={t('productsTitle') || "Search Results"} />
+      {/* Slider: مخفي في البحث، وظاهر في الرئيسية */}
+      {!keyword && !categoryId && (
+        <div className="mb-6 md:mb-10">
+           <ProductCarousel />
+        </div>
       )}
 
-      {/* إظهار الـ Carousel فقط في الصفحة الرئيسية العامة */}
-      {!keyword && !categoryId && <ProductCarousel />}
+      {/* Filter & Categories Bar (Sticky) */}
+      <div className="sticky top-[60px] md:top-[80px] z-30 mb-6 -mx-2 md:mx-0 px-2 md:px-0">
+        <div className="bg-white/90 dark:bg-dark-accent/90 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-3 shadow-sm md:rounded-2xl md:border md:px-4">
+            
+            {/* Categories Scroll */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <button
+                    onClick={() => handleCategoryClick('')}
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all border ${
+                        categoryId === ''
+                        ? 'bg-primary border-primary text-white shadow-md'
+                        : 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-600 dark:text-gray-300'
+                    }`}
+                >
+                    {t('all') || "All"}
+                </button>
 
-      {/* زر الرجوع للكل في حالة البحث أو الفلترة */}
-      {(keyword || categoryId) && (
-        <button
-          onClick={() => navigate('/')}
-          className="inline-flex items-center gap-2 mb-4 text-gray-500 dark:text-gray-400 hover:text-primary font-bold transition"
-        >
-          &larr; {t('backToProducts') || "Back to All Products"}
-        </button>
-      )}
-
-      {/* قسم الأقسام (Categories) */}
-      <div className="mb-10">
-        <h2 className="text-2xl font-black text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-          <FaThLarge className="text-primary" /> {t('browseCategories') || "Browse Categories"}
-        </h2>
-
-        <div className="flex flex-wrap gap-3">
-          {/* زر "الكل" */}
-          <button
-            onClick={() => handleCategoryClick('')}
-            className={`px-6 py-2 rounded-full font-bold transition border ${categoryId === ''
-              ? 'bg-primary border-primary text-white shadow-lg shadow-orange-500/30'
-              : 'bg-white dark:bg-dark-accent border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:text-dark'
-              }`}
-          >
-            {t('all') || "All"}
-          </button>
-
-          {/* قائمة الأقسام من الباك إند */}
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat.id)}
-              className={`px-6 py-2 rounded-full font-bold transition border ${String(categoryId) === String(cat.id)
-                ? 'bg-primary border-primary text-white shadow-lg shadow-orange-500/30'
-                : 'bg-white dark:bg-dark-accent border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:text-dark'
-                }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+                {categories.map((cat) => (
+                    <button
+                    key={cat.id}
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all border ${
+                        String(categoryId) === String(cat.id)
+                        ? 'bg-primary border-primary text-white shadow-md'
+                        : 'bg-gray-100 dark:bg-white/5 border-transparent text-gray-600 dark:text-gray-300'
+                    }`}
+                    >
+                    {cat.name}
+                    </button>
+                ))}
+            </div>
         </div>
       </div>
 
-      {/* عنوان المنتجات */}
-      <h2 className="text-3xl font-black text-gray-800 dark:text-white mb-8 flex items-center gap-2">
-        <span className="bg-primary w-2 h-8 rounded-full block"></span>
-        {keyword
-          ? `${t('searchResults') || "Search Results for:"} "${keyword}"`
-          : categoryId
-            ? t('filteredProducts') || "Filtered Products"
-            : t('latestProducts') || "LATEST PRODUCTS"}
-      </h2>
+      {/* Products Grid */}
+      {/* تعديل مهم: grid-cols-2 للموبايل مع gap-2 لتقليل الحجم */}
+      <div className="mb-4">
+        <h2 className="text-lg md:text-2xl font-black text-gray-900 dark:text-white mb-4 px-1 flex items-center gap-2">
+            {keyword ? `Search: "${keyword}"` : (t('latestProducts') || "Latest Drops")}
+        </h2>
 
-      {loading ? (
-        <div className="text-gray-500 dark:text-white text-center py-20 text-xl font-bold animate-pulse">
-          {t('loading') || "Loading products..."}
-        </div>
-      ) : products.length === 0 ? (
-        <div className="text-center py-20 bg-white dark:bg-dark-accent rounded-3xl border border-gray-200 dark:border-white/10 shadow-sm">
-          <h3 className="text-xl font-bold mb-2 text-gray-800 dark:text-white">
-            {t('noProducts') || "No products found."}
-          </h3>
-          <p className="text-gray-500">{t('tryAgain') || "Try clearing filters or searching for something else."}</p>
-        </div>
-      ) : (
-        <>
-          {/* شبكة المنتجات */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <div key={product.id || product._id} className="h-full">
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
+        {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                {[...Array(6)].map((_, i) => (
+                    <div key={i} className="bg-gray-200 dark:bg-white/5 h-48 md:h-80 rounded-2xl animate-pulse"></div>
+                ))}
+            </div>
+        ) : products.length === 0 ? (
+            <div className="text-center py-20 text-gray-500">No products found.</div>
+        ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+                {products.map((product) => (
+                <div key={product.id || product._id} className="h-full">
+                    {/* يمكنك تمرير prop لتصغير الكارت لو لزم الأمر، لكن الـ Grid هو المتحكم الأساسي */}
+                    <ProductCard product={product} />
+                </div>
+                ))}
+            </div>
+        )}
+      </div>
 
-          {/* الترقيم (Pagination) */}
-          <div className="mt-12 flex justify-center">
-            <Paginate pages={pages} page={page} keyword={keyword ? keyword : ''} />
-          </div>
-        </>
-      )}
+      {/* Pagination */}
+      <div className="mt-8 flex justify-center pb-20 md:pb-0">
+        <Paginate pages={pages} page={page} keyword={keyword ? keyword : ''} />
+      </div>
     </div>
   );
 };
