@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    FaHeart, FaShoppingBasket, FaSignOutAlt, FaUserCog, FaUser,
-    FaSun, FaMoon, FaGlobe, FaBars, FaTimes,
-    FaClipboardList, FaBox, FaUsers
+    FaHeart, FaShoppingBag, FaSun, FaMoon, FaBars, FaTimes, 
+    FaArrowRight, FaUserCog, FaClipboardList, FaBox, FaUsers, 
+    FaSignOutAlt, FaUser, FaGlobe, FaChevronDown
 } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import SearchBox from '../searchbox/SearchBox';
 import { useWishlist } from '../../context/WishlistContext';
 import { useSettings } from '../../context/SettingsContext';
-// استدعاء getImageUrl عشان نعرض صورة البروفايل في النافبار
 import { getImageUrl } from '../../api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = () => {
     const location = useLocation();
@@ -22,8 +22,10 @@ const Navbar = () => {
     const [isAuth, setIsAuth] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false); // للدسكتوب
 
-    useEffect(() => {
+    const checkAuth = useCallback(() => {
         const token = localStorage.getItem('token');
         try {
             const user = JSON.parse(localStorage.getItem('userInfo'));
@@ -38,17 +40,19 @@ const Navbar = () => {
             setIsAuth(false);
             setUserInfo(null);
         }
-        setMenuOpen(false);
-    }, [location]);
+    }, []);
 
-    // منع السكرول عند فتح القائمة
     useEffect(() => {
-        if (menuOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'auto';
-        }
-    }, [menuOpen]);
+        checkAuth();
+        setMenuOpen(false);
+        setProfileDropdownOpen(false);
+    }, [location, checkAuth]);
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 10);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     const logoutHandler = () => {
         clearCart();
@@ -56,200 +60,277 @@ const Navbar = () => {
         localStorage.removeItem('userInfo');
         setIsAuth(false);
         navigate('/login');
-        window.location.reload();
     };
 
-    const isActive = (path) => location.pathname === path ? "text-primary font-bold" : "hover:text-primary transition";
+    // --- Desktop Dropdown Logic ---
+    const toggleProfileDropdown = () => setProfileDropdownOpen(!profileDropdownOpen);
 
     return (
-        <header className="fixed top-0 w-full z-50 border-b border-gray-200 dark:border-white/10 shadow-sm bg-white/95 dark:bg-gray-900/95 backdrop-blur-md transition-colors duration-300">
-            <nav className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex justify-between items-center">
+        <>
+            <header
+                className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${
+                    scrolled 
+                    ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-gray-100 dark:border-white/5 py-3 shadow-sm' 
+                    : 'bg-white dark:bg-gray-900 border-transparent py-4'
+                }`}
+            >
+                <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
 
-                {/* 1. اللوجو */}
-                <Link to="/" className="text-2xl font-extrabold tracking-tighter text-primary z-50 relative">
-                    SMART<span className="text-gray-900 dark:text-white transition-colors">SHOP</span>
-                </Link>
-
-                {/* 2. زر القائمة للموبايل */}
-                <button
-                    className="lg:hidden p-2 text-2xl text-gray-800 dark:text-white z-50 relative focus:outline-none"
-                    onClick={() => setMenuOpen(!menuOpen)}
-                >
-                    {menuOpen ? <FaTimes className="text-red-500" /> : <FaBars />}
-                </button>
-
-                {/* 3. عناصر سطح المكتب (Hidden on Mobile) */}
-                <div className="hidden lg:flex flex-1 items-center justify-between gap-8 ml-8">
-                    <div className="flex-1 max-w-lg">
-                        <SearchBox />
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        <ul className="flex space-x-6 font-bold text-xs uppercase tracking-wider text-gray-600 dark:text-gray-300">
-                            <li><Link to="/" className={isActive('/')}>{t('home')}</Link></li>
-                        </ul>
-
-                        <div className="flex items-center gap-3 border-l border-r border-gray-300 dark:border-white/20 px-4">
-                            <button onClick={toggleLanguage} className="flex items-center gap-1 text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary transition">
-                                <FaGlobe size={14} /> {language === 'en' ? 'AR' : 'EN'}
-                            </button>
-                            <button onClick={toggleTheme} className="text-gray-600 dark:text-yellow-400 hover:text-primary transition">
-                                {theme === 'dark' ? <FaSun size={16} /> : <FaMoon size={16} />}
-                            </button>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                            {isAuth && (
-                                <>
-                                    <Link to="/wishlist" className="relative p-1 group text-gray-600 dark:text-white" title={t('wishlist')}>
-                                        <FaHeart className="text-xl group-hover:text-primary transition" />
-                                        {wishlistItems.length > 0 && <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold px-1.5 rounded-full">{wishlistItems.length}</span>}
-                                    </Link>
-
-                                    <Link to="/cart" className="relative p-1 group text-gray-600 dark:text-white" title={t('cart')}>
-                                        <FaShoppingBasket className="text-xl group-hover:text-primary transition" />
-                                        {cartItems.length > 0 && <span className="absolute -top-1 -right-1 bg-gray-900 dark:bg-white text-white dark:text-dark text-[10px] font-bold px-1.5 rounded-full">{cartItems.reduce((acc, item) => acc + item.qty, 0)}</span>}
-                                    </Link>
-                                </>
-                            )}
-
-                            {isAuth ? (
-                                <div className="flex items-center gap-3 pl-2 border-l border-gray-300 dark:border-white/20 ml-2">
-                                    {/* تعديل: إظهار صورة المستخدم لو موجودة */}
-                                    <Link to="/profile" className="w-9 h-9 bg-gray-200 dark:bg-white/10 rounded-full flex items-center justify-center border border-gray-300 dark:border-white/10 hover:border-primary transition overflow-hidden">
-                                        {userInfo?.profile?.profilePicture ? (
-                                            <img
-                                                src={getImageUrl(userInfo.profile.profilePicture)}
-                                                alt="profile"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => e.target.style.display = 'none'} // إخفاء الصورة لو باظت وإظهار الخلفية
-                                            />
-                                        ) : (
-                                            <FaUser size={14} className="text-gray-700 dark:text-white" />
-                                        )}
-                                    </Link>
-
-                                    {userInfo?.isAdmin && (
-                                        <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/5 px-2 py-1.5 rounded-full">
-                                            <Link to="/admin/orderlist" className="text-gray-500 dark:text-gray-400 hover:text-primary transition p-1" title="Orders"><FaClipboardList size={14} /></Link>
-                                            <Link to="/admin/productlist" className="text-gray-500 dark:text-gray-400 hover:text-primary transition p-1" title="Products"><FaBox size={14} /></Link>
-                                            <Link to="/admin/users" className="text-gray-500 dark:text-gray-400 hover:text-primary transition p-1" title="Users"><FaUsers size={14} /></Link>
-                                        </div>
-                                    )}
-
-                                    {userInfo?.profile?.type === 'vendor' && !userInfo?.isAdmin && (
-                                        <Link to="/dashboard" className="text-primary hover:text-gray-900 dark:hover:text-white transition" title="Seller Dashboard">
-                                            <FaUserCog size={18} />
-                                        </Link>
-                                    )}
-
-                                    <button onClick={logoutHandler} className="text-gray-400 hover:text-red-500 transition ml-1" title="Logout">
-                                        <FaSignOutAlt className="text-lg" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <Link to="/login" className="bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white px-5 py-2 rounded-full text-xs font-bold transition border border-gray-200 dark:border-white/5 ml-2">
-                                    {t('login')}
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ======================================================= */}
-                {/* 👇👇 قائمة الموبايل 👇👇 */}
-                {/* ======================================================= */}
-
-                <div
-                    className={`lg:hidden fixed top-0 left-0 w-full h-screen bg-white dark:bg-gray-900 z-[100] flex flex-col pt-24 px-6 transition-transform duration-300 ease-in-out ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-                >
-
-                    {/* مربع البحث */}
-                    <div className="mb-8 w-full">
-                        <SearchBox />
-                    </div>
-
-                    {/* الروابط الأساسية */}
-                    <div className="flex flex-col gap-4 text-center w-full">
-                        <Link to="/" onClick={() => setMenuOpen(false)} className="text-2xl font-bold text-gray-800 dark:text-white py-3 border-b border-gray-100 dark:border-white/10 block w-full hover:text-primary transition">
-                            {t('home')}
+                    {/* Logo & Mobile Toggle */}
+                    <div className="flex items-center gap-4">
+                        <button
+                            className="lg:hidden text-2xl text-gray-800 dark:text-white focus:outline-none"
+                            onClick={() => setMenuOpen(true)}
+                        >
+                            <FaBars />
+                        </button>
+                        
+                        <Link to="/" className="text-2xl font-black tracking-tighter flex items-center gap-1 group">
+                            <span className="text-gray-900 dark:text-white group-hover:text-primary transition-colors">SMART</span>
+                            <span className="text-primary group-hover:text-gray-900 dark:group-hover:text-white transition-colors">SHOP</span>
                         </Link>
-
-                        {isAuth && (
-                            <>
-                                <Link to="/cart" onClick={() => setMenuOpen(false)} className="text-xl font-bold text-gray-800 dark:text-white py-3 border-b border-gray-100 dark:border-white/10 flex justify-between items-center w-full hover:text-primary transition">
-                                    <span>{t('cart')}</span>
-                                    <span className="bg-primary text-white text-sm px-3 py-1 rounded-full">{cartItems.length}</span>
-                                </Link>
-                                <Link to="/wishlist" onClick={() => setMenuOpen(false)} className="text-xl font-bold text-gray-800 dark:text-white py-3 border-b border-gray-100 dark:border-white/10 flex justify-between items-center w-full hover:text-primary transition">
-                                    <span>{t('wishlist')}</span>
-                                    <span className="bg-primary text-white text-sm px-3 py-1 rounded-full">{wishlistItems.length}</span>
-                                </Link>
-                            </>
-                        )}
                     </div>
 
-                    {/* قسم المستخدم */}
-                    <div className="mt-auto mb-8 w-full">
+                    {/* Search (Desktop) */}
+                    <div className="hidden lg:block flex-1 max-w-lg mx-10">
+                        <SearchBox />
+                    </div>
+
+                    {/* Desktop Actions */}
+                    <div className="hidden lg:flex items-center gap-6">
+                         {/* 👇👇 New Modern Settings Capsule 👇👇 */}
+                        <div className="hidden lg:flex items-center bg-gray-100 dark:bg-white/5 rounded-full p-1 border border-gray-200 dark:border-white/5">
+                             <button 
+                                onClick={toggleLanguage} 
+                                className="px-3 py-1 text-[10px] font-black tracking-widest text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm rounded-full transition-all"
+                             >
+                                {language === 'en' ? 'AR' : 'EN'}
+                             </button>
+                             <div className="w-[1px] h-3 bg-gray-300 dark:bg-white/20 mx-1"></div>
+                             <button 
+                                onClick={toggleTheme} 
+                                className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-yellow-400 hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm rounded-full transition-all"
+                             >
+                                <motion.div
+                                    initial={false}
+                                    animate={{ rotate: theme === 'dark' ? 180 : 0 }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    {theme === 'dark' ? <FaSun size={12}/> : <FaMoon size={12}/>}
+                                </motion.div>
+                             </button>
+                        </div>
+                        
+                        {/* Cart & Wishlist */}
+                        {isAuth && (
+                            <div className="flex items-center gap-4">
+                                <NavIcon to="/wishlist" icon={<FaHeart />} count={wishlistItems.length} />
+                                <NavIcon to="/cart" icon={<FaShoppingBag />} count={cartItems.reduce((acc, item) => acc + item.qty, 0)} />
+                            </div>
+                        )}
+
+                        {/* User Profile & Dropdown (Restored Admin/Vendor) */}
                         {isAuth ? (
-                            <div className="bg-gray-50 dark:bg-white/5 p-6 rounded-3xl w-full border border-gray-100 dark:border-white/5">
-                                <div className="flex items-center gap-4 mb-6">
-                                    {/* تعديل: صورة البروفايل في الموبايل */}
-                                    <div className="w-12 h-12 bg-gray-200 dark:bg-white/10 text-white rounded-full flex items-center justify-center text-xl font-bold overflow-hidden">
-                                        {userInfo?.profile?.profilePicture ? (
-                                            <img
-                                                src={getImageUrl(userInfo.profile.profilePicture)}
-                                                alt="profile"
-                                                className="w-full h-full object-cover"
-                                                onError={(e) => e.target.style.display = 'none'}
-                                            />
-                                        ) : (
-                                            <span className="text-gray-500 dark:text-white">{userInfo.name[0].toUpperCase()}</span>
-                                        )}
+                            <div className="relative">
+                                <button onClick={toggleProfileDropdown} className="flex items-center gap-3 hover:opacity-80 transition focus:outline-none">
+                                    <div className="text-right hidden xl:block">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold tracking-wider">Welcome</p>
+                                        <p className="font-bold text-gray-900 dark:text-white text-sm leading-none">{userInfo.name.split(' ')[0]}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{t('welcome')}</p>
-                                        <p className="font-bold text-gray-900 dark:text-white text-lg">{userInfo.name}</p>
-                                    </div>
-                                </div>
-
-                                <Link to="/profile" onClick={() => setMenuOpen(false)} className="block bg-white dark:bg-black/20 text-center py-3 rounded-xl font-bold text-gray-800 dark:text-white mb-3 shadow-sm border border-gray-200 dark:border-transparent hover:bg-gray-100 dark:hover:bg-white/10 transition">
-                                    {t('profile')}
-                                </Link>
-
-                                {userInfo?.isAdmin && (
-                                    <div className="flex gap-2 mb-3">
-                                        <Link to="/admin/orderlist" onClick={() => setMenuOpen(false)} className="flex-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 py-3 rounded-xl flex justify-center hover:bg-blue-500/20 transition"><FaClipboardList size={20} /></Link>
-                                        <Link to="/admin/productlist" onClick={() => setMenuOpen(false)} className="flex-1 bg-green-500/10 text-green-600 dark:text-green-400 py-3 rounded-xl flex justify-center hover:bg-green-500/20 transition"><FaBox size={20} /></Link>
-                                        <Link to="/admin/users" onClick={() => setMenuOpen(false)} className="flex-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 py-3 rounded-xl flex justify-center hover:bg-purple-500/20 transition"><FaUsers size={20} /></Link>
-                                    </div>
-                                )}
-
-                                <button onClick={logoutHandler} className="w-full bg-red-500 text-white font-bold py-3 rounded-xl flex justify-center items-center gap-2 hover:bg-red-600 transition">
-                                    <FaSignOutAlt /> {t('logout')}
+                                    <img src={userInfo?.profile?.profilePicture ? getImageUrl(userInfo.profile.profilePicture) : "https://via.placeholder.com/150"} 
+                                         className="w-10 h-10 rounded-full object-cover border-2 border-gray-100 dark:border-white/10 shadow-sm" alt="avatar" />
+                                    <FaChevronDown size={10} className="text-gray-400" />
                                 </button>
+
+                                {/* Desktop Dropdown Menu */}
+                                <AnimatePresence>
+                                    {profileDropdownOpen && (
+                                        <motion.div 
+                                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                            className="absolute right-0 top-14 w-60 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-white/5 overflow-hidden py-2 z-50"
+                                        >
+                                            <div className="px-4 py-3 border-b border-gray-100 dark:border-white/5 mb-2">
+                                                <p className="font-bold text-gray-900 dark:text-white">{userInfo.name}</p>
+                                                <p className="text-xs text-gray-500">{userInfo.email}</p>
+                                            </div>
+
+                                            <DropdownLink to="/profile" icon={<FaUser />} label={t('profile')} />
+                                            
+                                            {/* Admin Links */}
+                                            {userInfo?.isAdmin && (
+                                                <>
+                                                    <div className="my-2 border-t border-gray-100 dark:border-white/5"></div>
+                                                    <p className="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Admin</p>
+                                                    <DropdownLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="Orders" />
+                                                    <DropdownLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products" />
+                                                    <DropdownLink to="/admin/users" icon={<FaUsers className="text-purple-500"/>} label="Users" />
+                                                </>
+                                            )}
+
+                                            {/* Vendor Link */}
+                                            {userInfo?.profile?.type === 'vendor' && !userInfo?.isAdmin && (
+                                                <DropdownLink to="/dashboard" icon={<FaUserCog className="text-orange-500"/>} label="Vendor Dashboard" />
+                                            )}
+
+                                            <div className="my-2 border-t border-gray-100 dark:border-white/5"></div>
+                                            <button onClick={logoutHandler} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-3 font-bold transition">
+                                                <FaSignOutAlt /> {t('logout')}
+                                            </button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ) : (
-                            <Link to="/login" onClick={() => setMenuOpen(false)} className="block w-full bg-primary text-white text-center font-bold py-4 rounded-2xl text-xl shadow-lg hover:bg-orange-600 transition">
+                            <Link to="/login" className="px-6 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full font-bold text-sm hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                                 {t('login')}
                             </Link>
                         )}
-
-                        {/* اللغة والثيم */}
-                        <div className="flex justify-between items-center mt-6 px-4">
-                            <button onClick={toggleLanguage} className="flex items-center gap-2 font-bold text-gray-600 dark:text-gray-300 hover:text-primary transition">
-                                <FaGlobe size={20} /> {language === 'en' ? 'العربية' : 'English'}
-                            </button>
-                            <button onClick={toggleTheme} className="flex items-center gap-2 font-bold text-gray-600 dark:text-gray-300 hover:text-primary transition">
-                                {theme === 'dark' ? <><FaSun className="text-yellow-500" size={20} /> Light</> : <><FaMoon className="text-gray-500" size={20} /> Dark</>}
-                            </button>
-                        </div>
+                    </div>
+                    
+                    {/* Mobile Cart Icon */}
+                    <div className="lg:hidden flex items-center gap-3">
+                         <Link to="/cart" className="relative p-2 text-gray-800 dark:text-white">
+                             <FaShoppingBag size={20} />
+                             {cartItems.length > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-primary text-white text-[10px] rounded-full flex items-center justify-center font-bold">{cartItems.length}</span>}
+                         </Link>
                     </div>
                 </div>
+            </header>
 
-            </nav>
-        </header>
+            {/* ========================================================== */}
+            {/* 👇👇 REDESIGNED PREMIUM MOBILE SIDEBAR 👇👇 */}
+            {/* ========================================================== */}
+            <AnimatePresence>
+                {menuOpen && (
+                    <>
+                        {/* Backdrop */}
+                        <motion.div 
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setMenuOpen(false)}
+                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+                        />
+                        
+                        {/* Drawer */}
+                        <motion.aside
+                            initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="fixed top-0 left-0 w-[85%] max-w-[340px] h-full bg-gray-50 dark:bg-gray-900 z-[70] shadow-2xl overflow-y-auto flex flex-col"
+                        >
+                            {/* 1. Header: Profile Card */}
+                            <div className="p-6 bg-white dark:bg-gray-800 shadow-sm z-10">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h2 className="text-2xl font-black text-gray-900 dark:text-white">MENU</h2>
+                                    <button onClick={() => setMenuOpen(false)} className="p-2 bg-gray-100 dark:bg-white/10 rounded-full text-gray-500 hover:text-red-500 transition">
+                                        <FaTimes />
+                                    </button>
+                                </div>
+
+                                {isAuth ? (
+                                    <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
+                                        <img src={userInfo?.profile?.profilePicture ? getImageUrl(userInfo.profile.profilePicture) : "https://via.placeholder.com/150"} 
+                                             className="w-14 h-14 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-md" alt="avatar" />
+                                        <div>
+                                            <p className="text-gray-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider">{t('welcome')}</p>
+                                            <p className="text-gray-900 dark:text-white font-black text-lg line-clamp-1">{userInfo.name}</p>
+                                            <Link to="/profile" onClick={() => setMenuOpen(false)} className="text-primary text-xs font-bold hover:underline mt-1 block">View Profile</Link>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Link to="/login" onClick={() => setMenuOpen(false)} className="flex items-center justify-center w-full py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/30">
+                                        {t('login')} / {t('register')}
+                                    </Link>
+                                )}
+                            </div>
+
+                            {/* 2. Scrollable Content */}
+                            <div className="flex-1 p-6 space-y-8 overflow-y-auto">
+                                
+                                {/* Search */}
+                                <div>
+                                    <SearchBox />
+                                </div>
+
+                                {/* Main Links */}
+                                <div className="space-y-1">
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">Shop</p>
+                                    <MobileLink to="/" icon={<FaBox/>} label={t('home')} onClick={() => setMenuOpen(false)} />
+                                    {isAuth && (
+                                        <>
+                                            <MobileLink to="/cart" icon={<FaShoppingBag/>} label={t('cart')} count={cartItems.length} onClick={() => setMenuOpen(false)} />
+                                            <MobileLink to="/wishlist" icon={<FaHeart/>} label={t('wishlist')} count={wishlistItems.length} onClick={() => setMenuOpen(false)} />
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* Admin / Vendor Section (Restored & Styled) */}
+                                {isAuth && (userInfo?.isAdmin || userInfo?.profile?.type === 'vendor') && (
+                                    <div className="space-y-1">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">Management</p>
+                                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-white/5">
+                                            {userInfo?.isAdmin && (
+                                                <>
+                                                    <MobileLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="All Orders" onClick={() => setMenuOpen(false)} simple />
+                                                    <MobileLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products List" onClick={() => setMenuOpen(false)} simple />
+                                                    <MobileLink to="/admin/users" icon={<FaUsers className="text-purple-500"/>} label="Users Manager" onClick={() => setMenuOpen(false)} simple />
+                                                </>
+                                            )}
+                                            {userInfo?.profile?.type === 'vendor' && !userInfo?.isAdmin && (
+                                                <MobileLink to="/dashboard" icon={<FaUserCog className="text-orange-500"/>} label="Seller Dashboard" onClick={() => setMenuOpen(false)} simple />
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* 3. Footer: Settings & Logout */}
+                            <div className="p-6 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-white/5">
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <button onClick={toggleLanguage} className="flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-white/5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300">
+                                        <FaGlobe /> {language === 'en' ? 'Arabic' : 'English'}
+                                    </button>
+                                    <button onClick={toggleTheme} className="flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-white/5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300">
+                                        {theme === 'dark' ? <><FaSun className="text-yellow-500"/> Light</> : <><FaMoon/> Dark</>}
+                                    </button>
+                                </div>
+                                {isAuth && (
+                                    <button onClick={logoutHandler} className="w-full py-3 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition">
+                                        <FaSignOutAlt /> {t('logout')}
+                                    </button>
+                                )}
+                            </div>
+
+                        </motion.aside>
+                    </>
+                )}
+            </AnimatePresence>
+        </>
     );
 };
+
+// --- Helper Components ---
+
+const NavIcon = ({ to, icon, count }) => (
+    <Link to={to} className="relative p-2.5 bg-gray-50 dark:bg-white/5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white transition-all">
+        <span className="text-lg">{icon}</span>
+        {count > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[9px] flex items-center justify-center rounded-full border border-white dark:border-gray-900 font-bold">{count}</span>}
+    </Link>
+);
+
+const DropdownLink = ({ to, icon, label }) => (
+    <Link to={to} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+        <span className="text-lg opacity-80">{icon}</span> {label}
+    </Link>
+);
+
+const MobileLink = ({ to, icon, label, count, onClick, simple }) => (
+    <Link to={to} onClick={onClick} className={`flex items-center justify-between p-3 rounded-xl transition-all ${simple ? 'hover:bg-gray-50 dark:hover:bg-white/5' : 'bg-transparent hover:bg-white dark:hover:bg-white/5 hover:shadow-sm'}`}>
+        <div className="flex items-center gap-4">
+            <span className={`text-xl ${simple ? '' : 'text-gray-400'}`}>{icon}</span>
+            <span className={`font-bold ${simple ? 'text-sm text-gray-600 dark:text-gray-300' : 'text-base text-gray-800 dark:text-white'}`}>{label}</span>
+        </div>
+        {count > 0 && <span className="bg-primary text-white text-[10px] px-2 py-0.5 rounded-md font-bold">{count}</span>}
+        {!simple && !count && <FaArrowRight className="text-gray-300 text-xs" />}
+    </Link>
+);
 
 export default Navbar;
