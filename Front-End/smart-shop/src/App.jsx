@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 // Layouts & Components
 import Navbar from './components/navbar/Navbar';
 import Footer from './components/footer/Footer';
-import Meta from './components/tapheader/Meta';
-import NotFound from './pages/notfound/NotFound'; // 👈 استيراد الصفحة الجديدة
+import NotFound from './pages/notfound/NotFound';
 
 // Public Pages
 import Home from './pages/home/Home';
@@ -28,20 +28,22 @@ import ResetPasswordScreen from './pages/login/ResetPasswordScreen';
 import ActivationScreen from './pages/registerPage/ActivationScreen';
 
 // Seller Pages & Layout
-import SellerLayout from '../src/components/sellerlayout/SellerLayout'; // 👈 استيراد الليآوت
+import SellerLayout from '../src/components/sellerlayout/SellerLayout';
 import SellerDashboard from './pages/seller/SellerDashboard';
 import ProductEditScreen from './pages/seller/ProductEditScreen';
-import MyProducts from './pages/seller/MyProducts'; // 👈 استيراد صفحة منتجاتي
+import MyProducts from './pages/seller/MyProducts';
 
 // Admin Pages
 import OrderListScreen from './pages/admin/OrderListScreen';
 import UserListScreen from './pages/admin/UserListScreen';
 import ProductListScreen from './pages/admin/ProductListScreen';
+import AdminRoute from './components/adminroute/AdminRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
   return (
-    // 👇 تعديل الخلفية لتكون متجاوبة مع الوضعين (فاتح/غامق) بدلاً من bg-dark الثابتة
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-dark font-sans transition-colors duration-300">
+      <Toaster position="bottom-center" reverseOrder={false} />
 
       <Navbar />
 
@@ -65,25 +67,33 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
         <Route path="/reset-password/:uid/:token" element={<ResetPasswordScreen />} />
         <Route path="/activate/:uid/:token" element={<ActivationScreen />} />
+        
 
-        {/* Admin Routes */}
+        
+        {/* مسارات الأدمن للمنتجات */}
+        <Route path="/admin/product/create" element={<ProductEditScreen />} />
+        <Route path="/admin/product/:id/edit" element={<ProductEditScreen />} />
+        
+        {/* مسارات البائع للمنتجات */}
+        <Route path="/seller/products/add" element={<ProductEditScreen />} />
+        <Route path="/seller/product/:id/edit" element={<ProductEditScreen />} />
+
+
+        {/* Admin Dashboard Routes */}
         <Route path="/admin/orderlist" element={<OrderListScreen />} />
         <Route path="/admin/users" element={<UserListScreen />} />
         <Route path="/admin/productlist" element={<ProductListScreen />} />
-        <Route path="/admin/product/:id/edit" element={<ProductEditScreen />} />
+        <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        
 
-        {/* 👇 Seller Routes (Vendor Panel) 👇 */}
-        {/* تم تجميعها داخل SellerLayout لتظهر القائمة الجانبية */}
+        {/* Seller Dashboard Routes (Inside Layout with Sidebar) */}
         <Route path="/seller" element={<SellerLayout />}>
           <Route path="dashboard" element={<SellerDashboard />} />
           <Route path="products" element={<MyProducts />} />
-          <Route path="product/:id/edit" element={<ProductEditScreen />} />
-          <Route path="products/add" element={<ProductEditScreen />} />
-          {/* لو عندك صفحة طلبات خاصة بالتاجر، ضيفها هنا */}
           <Route path="orders" element={<OrderListScreen />} />
         </Route>
 
-        {/* Backward Compatibility: إعادة توجيه لو حد دخل على الرابط القديم */}
+        {/* Backward Compatibility */}
         <Route path="/dashboard" element={<SellerDashboard />} />
         
         <Route path="*" element={<NotFound />} />

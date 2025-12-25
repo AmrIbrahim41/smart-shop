@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaHeart, FaShoppingBag, FaSun, FaMoon, FaBars, FaTimes, 
     FaArrowRight, FaUserCog, FaClipboardList, FaBox, FaUsers, 
-    FaSignOutAlt, FaUser, FaGlobe, FaChevronDown
+    FaSignOutAlt, FaUser, FaGlobe, FaChevronDown, FaChartLine // 👈 Added FaChartLine
 } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import SearchBox from '../searchbox/SearchBox';
@@ -23,7 +23,7 @@ const Navbar = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false); // للدسكتوب
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
     const checkAuth = useCallback(() => {
         const token = localStorage.getItem('token');
@@ -62,7 +62,6 @@ const Navbar = () => {
         navigate('/login');
     };
 
-    // --- Desktop Dropdown Logic ---
     const toggleProfileDropdown = () => setProfileDropdownOpen(!profileDropdownOpen);
 
     return (
@@ -98,7 +97,6 @@ const Navbar = () => {
 
                     {/* Desktop Actions */}
                     <div className="hidden lg:flex items-center gap-6">
-                         {/* 👇👇 New Modern Settings Capsule 👇👇 */}
                         <div className="hidden lg:flex items-center bg-gray-100 dark:bg-white/5 rounded-full p-1 border border-gray-200 dark:border-white/5">
                              <button 
                                 onClick={toggleLanguage} 
@@ -121,7 +119,6 @@ const Navbar = () => {
                              </button>
                         </div>
                         
-                        {/* Cart & Wishlist */}
                         {isAuth && (
                             <div className="flex items-center gap-4">
                                 <NavIcon to="/wishlist" icon={<FaHeart />} count={wishlistItems.length} />
@@ -129,7 +126,6 @@ const Navbar = () => {
                             </div>
                         )}
 
-                        {/* User Profile & Dropdown (Restored Admin/Vendor) */}
                         {isAuth ? (
                             <div className="relative">
                                 <button onClick={toggleProfileDropdown} className="flex items-center gap-3 hover:opacity-80 transition focus:outline-none">
@@ -142,7 +138,6 @@ const Navbar = () => {
                                     <FaChevronDown size={10} className="text-gray-400" />
                                 </button>
 
-                                {/* Desktop Dropdown Menu */}
                                 <AnimatePresence>
                                     {profileDropdownOpen && (
                                         <motion.div 
@@ -161,13 +156,14 @@ const Navbar = () => {
                                                 <>
                                                     <div className="my-2 border-t border-gray-100 dark:border-white/5"></div>
                                                     <p className="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Admin</p>
+                                                    {/* 👇 ADDED DASHBOARD HERE */}
+                                                    <DropdownLink to="/admin/dashboard" icon={<FaChartLine className="text-orange-500"/>} label="Dashboard" />
                                                     <DropdownLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="Orders" />
                                                     <DropdownLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products" />
                                                     <DropdownLink to="/admin/users" icon={<FaUsers className="text-purple-500"/>} label="Users" />
                                                 </>
                                             )}
 
-                                            {/* Vendor Link */}
                                             {userInfo?.profile?.type === 'vendor' && !userInfo?.isAdmin && (
                                                 <DropdownLink to="/dashboard" icon={<FaUserCog className="text-orange-500"/>} label="Vendor Dashboard" />
                                             )}
@@ -187,7 +183,6 @@ const Navbar = () => {
                         )}
                     </div>
                     
-                    {/* Mobile Cart Icon */}
                     <div className="lg:hidden flex items-center gap-3">
                          <Link to="/cart" className="relative p-2 text-gray-800 dark:text-white">
                              <FaShoppingBag size={20} />
@@ -197,26 +192,20 @@ const Navbar = () => {
                 </div>
             </header>
 
-            {/* ========================================================== */}
-            {/* 👇👇 REDESIGNED PREMIUM MOBILE SIDEBAR 👇👇 */}
-            {/* ========================================================== */}
             <AnimatePresence>
                 {menuOpen && (
                     <>
-                        {/* Backdrop */}
                         <motion.div 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setMenuOpen(false)}
                             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
                         />
                         
-                        {/* Drawer */}
                         <motion.aside
                             initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             className="fixed top-0 left-0 w-[85%] max-w-[340px] h-full bg-gray-50 dark:bg-gray-900 z-[70] shadow-2xl overflow-y-auto flex flex-col"
                         >
-                            {/* 1. Header: Profile Card */}
                             <div className="p-6 bg-white dark:bg-gray-800 shadow-sm z-10">
                                 <div className="flex justify-between items-start mb-6">
                                     <h2 className="text-2xl font-black text-gray-900 dark:text-white">MENU</h2>
@@ -242,15 +231,9 @@ const Navbar = () => {
                                 )}
                             </div>
 
-                            {/* 2. Scrollable Content */}
                             <div className="flex-1 p-6 space-y-8 overflow-y-auto">
-                                
-                                {/* Search */}
-                                <div>
-                                    <SearchBox />
-                                </div>
+                                <div><SearchBox /></div>
 
-                                {/* Main Links */}
                                 <div className="space-y-1">
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">Shop</p>
                                     <MobileLink to="/" icon={<FaBox/>} label={t('home')} onClick={() => setMenuOpen(false)} />
@@ -262,13 +245,14 @@ const Navbar = () => {
                                     )}
                                 </div>
 
-                                {/* Admin / Vendor Section (Restored & Styled) */}
                                 {isAuth && (userInfo?.isAdmin || userInfo?.profile?.type === 'vendor') && (
                                     <div className="space-y-1">
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">Management</p>
                                         <div className="bg-white dark:bg-gray-800 rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-white/5">
                                             {userInfo?.isAdmin && (
                                                 <>
+                                                    {/* 👇 ADDED DASHBOARD HERE FOR MOBILE */}
+                                                    <MobileLink to="/admin/dashboard" icon={<FaChartLine className="text-orange-500"/>} label="Dashboard" onClick={() => setMenuOpen(false)} simple />
                                                     <MobileLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="All Orders" onClick={() => setMenuOpen(false)} simple />
                                                     <MobileLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products List" onClick={() => setMenuOpen(false)} simple />
                                                     <MobileLink to="/admin/users" icon={<FaUsers className="text-purple-500"/>} label="Users Manager" onClick={() => setMenuOpen(false)} simple />
@@ -282,7 +266,6 @@ const Navbar = () => {
                                 )}
                             </div>
 
-                            {/* 3. Footer: Settings & Logout */}
                             <div className="p-6 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-white/5">
                                 <div className="grid grid-cols-2 gap-3 mb-4">
                                     <button onClick={toggleLanguage} className="flex items-center justify-center gap-2 py-3 bg-gray-50 dark:bg-white/5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300">
@@ -306,8 +289,6 @@ const Navbar = () => {
         </>
     );
 };
-
-// --- Helper Components ---
 
 const NavIcon = ({ to, icon, count }) => (
     <Link to={to} className="relative p-2.5 bg-gray-50 dark:bg-white/5 rounded-full text-gray-600 dark:text-gray-300 hover:bg-primary hover:text-white transition-all">

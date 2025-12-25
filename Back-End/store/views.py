@@ -9,6 +9,13 @@ from .serializers import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
 
+from django.db.models import Sum
+from datetime import timedelta
+from django.utils import timezone
+
+import csv
+from django.http import HttpResponse
+
 # views for Products
 
 
@@ -263,13 +270,20 @@ def getOrderById(request, pk):
     try:
         order = Order.objects.get(id=pk)
 
-        if user.is_staff or order.user == user:
+        # 👇 التعديل: استعلام مباشر عن OrderItem لتجنب مشاكل الأسماء
+        # بنقوله: هل يوجد أي "عنصر" داخل هذا "الطلب" يتبع منتجاً يملكه هذا "المستخدم"؟
+        is_seller_item = OrderItem.objects.filter(
+            order=order, product__user=user
+        ).exists()
+
+        # الشرط: أدمن OR صاحب الطلب (المشتري) OR صاحب منتج في الطلب (بائع)
+        if user.is_staff or order.user == user or is_seller_item:
             serializer = OrderSerializer(order, many=False)
             return Response(serializer.data)
         else:
             return Response(
                 {"detail": "Not authorized to view this order"},
-                status=status.HTTP_400_BAD_REQUEST,
+                status=status.HTTP_403_FORBIDDEN,
             )
 
     except Order.DoesNotExist:
@@ -553,3 +567,108 @@ def deleteProductImage(request, pk):
         return Response("Image Deleted")
     except ProductImage.DoesNotExist:
         return Response({"detail": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# -------------------------
+# 1. Admin Analytics Dashboard
+# -------------------------
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def getDashboardStats(request):
+    total_sales = Order.objects.aggregate(sum=Sum("totalPrice"))["sum"] or 0
+    total_orders = Order.objects.count()
+    total_products = Product.objects.count()
+    total_users = User.objects.count()
+
+    # تحسين داتا الشارت (آخر 7 طلبات أو آخر 7 أيام)
+    # بنرجع التاريخ والسعر فقط
+    recent_orders = Order.objects.all().order_by("-createdAt")[:10]
+    # بنعكس الترتيب عشان الشارت يبدأ من القديم للجديد
+    orders_data = [
+        {"name": o.createdAt.strftime("%d/%m"), "sales": o.totalPrice}
+        for o in reversed(recent_orders)
+    ]
+
+    return Response(
+        {
+            "totalSales": total_sales,
+            "totalOrders": total_orders,
+            "totalProducts": total_products,
+            "totalUsers": total_users,
+            "salesChart": orders_data,  # الداتا الجديدة للشارت
+        }
+    )
+
+
+# -------------------------
+# 2. Category Management (Admin)
+# -------------------------
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def createCategory(request):
+    data = request.data
+    try:
+        category = Category.objects.create(
+            name=data["name"],
+            # لو عندك حقل للصورة أو الوصف ضيفه هنا
+        )
+        serializer = CategorySerializer(category, many=False)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(["PUT"])
+@permission_classes([IsAdminUser])
+def updateCategory(request, pk):
+    data = request.data
+    try:
+        category = Category.objects.get(id=pk)
+        category.name = data.get("name", category.name)
+        category.save()
+        return Response(CategorySerializer(category, many=False).data)
+    except Category.DoesNotExist:
+        return Response(
+            {"detail": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def deleteCategory(request, pk):
+    try:
+        category = Category.objects.get(id=pk)
+        category.delete()
+        return Response("Category Deleted")
+    except Category.DoesNotExist:
+        return Response(
+            {"detail": "Category not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def exportOrdersCSV(request):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="orders_report.csv"'
+
+    writer = csv.writer(response)
+    # عناوين الأعمدة
+    writer.writerow(
+        ["Order ID", "Customer", "Date", "Total Price", "Paid?", "Delivered?"]
+    )
+
+    orders = Order.objects.all().order_by("-createdAt")
+    for order in orders:
+        writer.writerow(
+            [
+                order._id if hasattr(order, "_id") else order.id,
+                order.user.first_name if order.user else "Guest",
+                order.createdAt.strftime("%Y-%m-%d"),
+                order.totalPrice,
+                "Yes" if order.isPaid else "No",
+                "Yes" if order.isDelivered else "No",
+            ]
+        )
+
+    return response
