@@ -1,10 +1,13 @@
 from rest_framework.decorators import api_view, permission_classes, parser_classes
+
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
+
 from .models import *
 from rest_framework.parsers import MultiPartParser, FormParser
 from datetime import datetime
+
 from .serializers import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Q
@@ -15,6 +18,7 @@ from django.utils import timezone
 
 import csv
 from django.http import HttpResponse
+import json
 
 # views for Products
 
@@ -97,18 +101,56 @@ def getMyProducts(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
 def createProduct(request):
+    data = request.data
     user = request.user
-    # بننشئ منتج مبدئي، والبايع بيعدله في صفحة التعديل
+
+    status_value = "pending"
+    if user.is_staff:
+        status_value = data.get("approval_status", "pending")
+
+    # 1. إنشاء المنتج الأساسي
     product = Product.objects.create(
         user=user,
-        name="Product Name",
-        price=0,
-        brand="Brand",
-        countInStock=0,
-        description="",
-        approval_status="pending",
+        name=data.get("name"),
+        price=data.get("price"),
+        brand=data.get("brand"),
+        countInStock=data.get("countInStock"),
+        category_id=data.get("category"),
+        description=data.get("description"),
+        approval_status=status_value,
     )
+
+    # 2. حفظ الصورة الرئيسية (Main Image)
+    if request.FILES.get("image"):
+        product.image = request.FILES.get("image")
+
+    # ---------------------------------------------------
+    # 3. حل مشكلة الصور الفرعية (Sub Images) ✅
+    # ---------------------------------------------------
+    # نستخدم getlist لجلب كل الملفات المرسلة تحت اسم 'images'
+    images = request.FILES.getlist("images")
+    for img in images:
+        ProductImage.objects.create(product=product, image=img)
+
+    # ---------------------------------------------------
+    # 4. حل مشكلة التاجز (Tags) ✅
+    # ---------------------------------------------------
+    if "tags" in data:
+        tags_data = data["tags"]
+        # التأكد من أن البيانات نصية (JSON String)
+        if isinstance(tags_data, str):
+            try:
+                tags_list = json.loads(tags_data)
+                for tag_name in tags_list:
+                    # تنظيف النص وإنشاء التاج أو جلبه
+                    tag, created = Tag.objects.get_or_create(name=tag_name.strip())
+                    product.tags.add(tag)
+            except json.JSONDecodeError:
+                print("Error decoding tags JSON in Create")
+
+    product.save()
     serializer = ProductSerializer(product, many=False)
     return Response(serializer.data)
 
@@ -117,63 +159,52 @@ def createProduct(request):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def updateProduct(request, pk):
-    try:
-        product = Product.objects.get(id=pk)
+    product = Product.objects.get(id=pk)
+    data = request.data
 
-        # 1. التحقق من الصلاحية (صاحب المنتج أو أدمن)
-        if product.user != request.user and not request.user.is_staff:
-            return Response(
-                {"detail": "Not authorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
+    # 1. تحديث البيانات النصية
+    product.name = data.get("name", product.name)
+    product.price = data.get("price", product.price)
+    product.brand = data.get("brand", product.brand)
+    product.countInStock = data.get("countInStock", product.countInStock)
+    product.description = data.get("description", product.description)
+    
+    if request.user.is_staff:
+        product.approval_status = data.get("approval_status", product.approval_status)
 
-        data = request.data
+    if data.get("category"):
+        product.category_id = data.get("category")
 
-        # 2. تحديث النصوص الأساسية
-        product.name = data.get("name", product.name)
-        product.price = data.get("price", product.price)
-        product.brand = data.get("brand", product.brand)
-        product.countInStock = data.get("countInStock", product.countInStock)
-        product.description = data.get("description", product.description)
-        product.discount_price = data.get("discount_price", product.discount_price)
+    # 2. تحديث الصورة الرئيسية
+    if request.FILES.get("image"):
+        product.image = request.FILES.get("image")
 
-        # 3. تحديث القسم (category) - معالجة الـ ID القادم من الفرونت
-        category_id = data.get("category")
-        if category_id and category_id != "undefined":
+    # ---------------------------------------------------
+    # 3. حل مشكلة الصور الفرعية في التعديل (إضافة صور جديدة) ✅
+    # ---------------------------------------------------
+    # الصور القديمة لا تُمسح هنا، فقط نضيف الصور الجديدة القادمة من الفرونت
+    images = request.FILES.getlist("images")
+    for img in images:
+        ProductImage.objects.create(product=product, image=img)
+
+    # ---------------------------------------------------
+    # 4. حل مشكلة التاجز في التعديل ✅
+    # ---------------------------------------------------
+    if "tags" in data:
+        tags_data = data["tags"]
+        if isinstance(tags_data, str):
             try:
-                product.category = Category.objects.get(id=category_id)
-            except Category.DoesNotExist:
-                return Response(
-                    {"detail": "Category not found"}, status=status.HTTP_400_BAD_REQUEST
-                )
+                tags_list = json.loads(tags_data)
+                product.tags.clear()  # نمسح العلاقات القديمة
+                for tag_name in tags_list:
+                    tag, created = Tag.objects.get_or_create(name=tag_name.strip())
+                    product.tags.add(tag)
+            except json.JSONDecodeError:
+                print("Error decoding tags JSON in Update")
 
-        # 4. تحديث حالة الموافقة (للأدمن فقط)
-        if request.user.is_staff and data.get("approval_status"):
-            product.approval_status = data.get("approval_status")
-
-        # 5. تحديث الصورة الأساسية
-        if request.FILES.get("image"):
-            product.image = request.FILES.get("image")
-
-        product.save()
-
-        # 6. رفع الصور الفرعية (المعرض)
-        # تأكد أن المسمى 'images' يطابق formData.append('images', file) في React
-        new_images = request.FILES.getlist("images")
-        if new_images:
-            for img in new_images:
-                ProductImage.objects.create(product=product, image=img)
-
-        # 7. إرجاع البيانات الجديدة للفرونت إند
-        product.refresh_from_db()
-        serializer = ProductSerializer(product, many=False)
-        return Response(serializer.data)
-
-    except Product.DoesNotExist:
-        return Response(
-            {"detail": "Product not found"}, status=status.HTTP_404_NOT_FOUND
-        )
-    except Exception as e:
-        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    product.save()
+    serializer = ProductSerializer(product, many=False)
+    return Response(serializer.data)
 
 
 @api_view(["DELETE"])
@@ -672,3 +703,77 @@ def exportOrdersCSV(request):
         )
 
     return response
+
+
+# أضف هذا الكود في نهاية ملف views.py
+
+
+@api_view(["GET"])
+def getProductsByCategory(request):
+    categories = Category.objects.all()
+    data = []
+
+    for cat in categories:
+        # هنجيب المنتجات الخاصة بالقسم ده (الموافق عليها فقط)
+        products = Product.objects.filter(
+            category=cat, approval_status="approved"
+        ).order_by("-createdAt")
+
+        # لو القسم فيه منتجات، ضيفه للقائمة
+        if products.exists():
+            serializer = ProductSerializer(products, many=True)
+            data.append({"id": cat.id, "name": cat.name, "products": serializer.data})
+
+    return Response(data)
+
+
+
+
+# -------------------------
+# 3. Tag Management (Admin)
+# -------------------------
+@api_view(["GET"])
+def getTags(request):
+    tags = Tag.objects.all()
+    # تأكد أن TagSerializer موجود في serializers.py
+    # لو مش موجود، ممكن تستخدم CategorySerializer مؤقتاً لو نفس الشكل (id, name)
+    # أو ضيف TagSerializer في ملف serializers.py
+    serializer = CategorySerializer(tags, many=True) 
+    return Response(serializer.data)
+
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def createTag(request):
+    data = request.data
+    try:
+        tag = Tag.objects.create(name=data["name"])
+        serializer = CategorySerializer(tag, many=False)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["PUT"])
+@permission_classes([IsAdminUser])
+def updateTag(request, pk):
+    data = request.data
+    try:
+        tag = Tag.objects.get(id=pk)
+        tag.name = data.get("name", tag.name)
+        tag.save()
+        return Response(CategorySerializer(tag, many=False).data)
+    except Tag.DoesNotExist:
+        return Response(
+            {"detail": "Tag not found"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def deleteTag(request, pk):
+    try:
+        tag = Tag.objects.get(id=pk)
+        tag.delete()
+        return Response("Tag Deleted")
+    except Tag.DoesNotExist:
+        return Response(
+            {"detail": "Tag not found"}, status=status.HTTP_404_NOT_FOUND
+        )

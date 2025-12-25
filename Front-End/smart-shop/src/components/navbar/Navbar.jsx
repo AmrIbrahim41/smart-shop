@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaHeart, FaShoppingBag, FaSun, FaMoon, FaBars, FaTimes, 
     FaArrowRight, FaUserCog, FaClipboardList, FaBox, FaUsers, 
-    FaSignOutAlt, FaUser, FaGlobe, FaChevronDown, FaChartLine // 👈 Added FaChartLine
+    FaSignOutAlt, FaUser, FaGlobe, FaChevronDown, FaChartLine, FaStore // 👈 1. Added FaStore
 } from 'react-icons/fa';
 import { useCart } from '../../context/CartContext';
 import SearchBox from '../searchbox/SearchBox';
@@ -88,6 +88,12 @@ const Navbar = () => {
                             <span className="text-gray-900 dark:text-white group-hover:text-primary transition-colors">SMART</span>
                             <span className="text-primary group-hover:text-gray-900 dark:group-hover:text-white transition-colors">SHOP</span>
                         </Link>
+
+                        {/* 👈 2. Desktop Shop Link (New) */}
+                        <Link to="/shop" className="hidden lg:flex items-center gap-2 ml-6 font-bold text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+                            <FaStore className="text-lg mb-0.5" />
+                            <span>Shop</span>
+                        </Link>
                     </div>
 
                     {/* Search (Desktop) */}
@@ -156,7 +162,6 @@ const Navbar = () => {
                                                 <>
                                                     <div className="my-2 border-t border-gray-100 dark:border-white/5"></div>
                                                     <p className="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Admin</p>
-                                                    {/* 👇 ADDED DASHBOARD HERE */}
                                                     <DropdownLink to="/admin/dashboard" icon={<FaChartLine className="text-orange-500"/>} label="Dashboard" />
                                                     <DropdownLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="Orders" />
                                                     <DropdownLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products" />
@@ -237,6 +242,10 @@ const Navbar = () => {
                                 <div className="space-y-1">
                                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-2">Shop</p>
                                     <MobileLink to="/" icon={<FaBox/>} label={t('home')} onClick={() => setMenuOpen(false)} />
+                                    
+                                    {/* 👈 3. Mobile Shop Link (New) */}
+                                    <MobileLink to="/shop" icon={<FaStore/>} label="Shop Categories" onClick={() => setMenuOpen(false)} />
+
                                     {isAuth && (
                                         <>
                                             <MobileLink to="/cart" icon={<FaShoppingBag/>} label={t('cart')} count={cartItems.length} onClick={() => setMenuOpen(false)} />
@@ -251,7 +260,6 @@ const Navbar = () => {
                                         <div className="bg-white dark:bg-gray-800 rounded-2xl p-2 shadow-sm border border-gray-100 dark:border-white/5">
                                             {userInfo?.isAdmin && (
                                                 <>
-                                                    {/* 👇 ADDED DASHBOARD HERE FOR MOBILE */}
                                                     <MobileLink to="/admin/dashboard" icon={<FaChartLine className="text-orange-500"/>} label="Dashboard" onClick={() => setMenuOpen(false)} simple />
                                                     <MobileLink to="/admin/orderlist" icon={<FaClipboardList className="text-blue-500"/>} label="All Orders" onClick={() => setMenuOpen(false)} simple />
                                                     <MobileLink to="/admin/productlist" icon={<FaBox className="text-green-500"/>} label="Products List" onClick={() => setMenuOpen(false)} simple />

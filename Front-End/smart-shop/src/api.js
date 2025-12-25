@@ -56,6 +56,13 @@ export const ENDPOINTS = {
   CREATE_CATEGORY: 'api/categories/create/',
   UPDATE_CATEGORY: (id) => `api/categories/update/${id}/`,
   DELETE_CATEGORY: (id) => `api/categories/delete/${id}/`,
+
+  TAGS: "api/tags/",
+  CREATE_TAG: "api/tags/create/",
+  UPDATE_TAG: (id) => `api/tags/update/${id}/`,
+  DELETE_TAG: (id) => `api/tags/delete/${id}/`,
+
+
 };
 
 export const apiService = {
@@ -77,6 +84,11 @@ export const apiService = {
   createCategory: (data) => api.post(ENDPOINTS.CREATE_CATEGORY, data),
   updateCategory: (id, data) => api.put(ENDPOINTS.UPDATE_CATEGORY(id), data),
   deleteCategory: (id) => api.delete(ENDPOINTS.DELETE_CATEGORY(id)),
+
+  getTags: () => api.get(ENDPOINTS.TAGS),
+  createTag: (data) => api.post(ENDPOINTS.CREATE_TAG, data),
+  updateTag: (id, data) => api.put(ENDPOINTS.UPDATE_TAG(id), data),
+  deleteTag: (id) => api.delete(ENDPOINTS.DELETE_TAG(id)),
 };
 
 export const links = {

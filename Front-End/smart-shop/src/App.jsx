@@ -9,6 +9,7 @@ import NotFound from './pages/notfound/NotFound';
 
 // Public Pages
 import Home from './pages/home/Home';
+import ShopScreen from './pages/home/ShopScreen'; 
 import ProductDetails from './pages/productdetails/ProductDetails';
 import WishlistScreen from './pages/Wishlist/WishlistScreen';
 
@@ -37,7 +38,7 @@ import MyProducts from './pages/seller/MyProducts';
 import OrderListScreen from './pages/admin/OrderListScreen';
 import UserListScreen from './pages/admin/UserListScreen';
 import ProductListScreen from './pages/admin/ProductListScreen';
-import AdminRoute from './components/adminroute/AdminRoute';
+import AdminRoute from './components/adminRoute/AdminRoute';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<Home />} />
+        <Route path="/shop" element={<ShopScreen />} /> {/* 👈 2. إضافة الرابط هنا */}
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/wishlist" element={<WishlistScreen />} />
 
@@ -68,8 +70,6 @@ function App() {
         <Route path="/reset-password/:uid/:token" element={<ResetPasswordScreen />} />
         <Route path="/activate/:uid/:token" element={<ActivationScreen />} />
         
-
-        
         {/* مسارات الأدمن للمنتجات */}
         <Route path="/admin/product/create" element={<ProductEditScreen />} />
         <Route path="/admin/product/:id/edit" element={<ProductEditScreen />} />
@@ -77,7 +77,6 @@ function App() {
         {/* مسارات البائع للمنتجات */}
         <Route path="/seller/products/add" element={<ProductEditScreen />} />
         <Route path="/seller/product/:id/edit" element={<ProductEditScreen />} />
-
 
         {/* Admin Dashboard Routes */}
         <Route path="/admin/orderlist" element={<OrderListScreen />} />

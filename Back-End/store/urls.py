@@ -7,13 +7,14 @@ urlpatterns = [
     # -------------------------
     path("products/", views.getProducts, name="products"),
     path("products/top/", views.getTopProducts, name="top-products"),
+    path("products/shop-view/", views.getProductsByCategory, name="shop-view"),
     # -------------------------
     # 1.1. Product Creation & User's Products
     # -------------------------
     path("products/create/", views.createProduct, name="product-create"),
     path("products/myproducts/", views.getMyProducts, name="my-products"),
     # -------------------------
-    # 2. Product Details (لازم يكون في الآخر عشان الـ ID)
+    # 2. Product Details
     # -------------------------
     path("products/<str:pk>/", views.getProduct, name="product-detail"),
     path(
@@ -48,7 +49,9 @@ urlpatterns = [
     path("orders/myorders/", views.getMyOrders, name="myorders"),
     path("orders/<str:pk>/", views.getOrderById, name="user-order"),
     path("orders/<str:pk>/pay/", views.updateOrderToPaid, name="pay"),
-    path("orders/<str:pk>/deliver/", views.updateOrderToDelivered, name="order-delivered"),
+    path(
+        "orders/<str:pk>/deliver/", views.updateOrderToDelivered, name="order-delivered"
+    ),
     path("orders/delete/<str:pk>/", views.deleteOrder, name="delete-order"),
     # -------------------------
     # 6. Cart & Wishlist
@@ -67,4 +70,8 @@ urlpatterns = [
     path("categories/update/<str:pk>/", views.updateCategory, name="category-update"),
     path("categories/delete/<str:pk>/", views.deleteCategory, name="category-delete"),
     path("orders/export/csv/", views.exportOrdersCSV, name="export-csv"),
+    path("tags/", views.getTags, name="tags"),
+    path("tags/create/", views.createTag, name="tag-create"),
+    path("tags/update/<str:pk>/", views.updateTag, name="tag-update"),
+    path("tags/delete/<str:pk>/", views.deleteTag, name="tag-delete"),
 ]
