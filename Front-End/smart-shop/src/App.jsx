@@ -38,7 +38,7 @@ import MyProducts from './pages/seller/MyProducts';
 import OrderListScreen from './pages/admin/OrderListScreen';
 import UserListScreen from './pages/admin/UserListScreen';
 import ProductListScreen from './pages/admin/ProductListScreen';
-import AdminRoute from './components/adminRoute/AdminRoute';
+import AdminRoute from './components/adminroute/AdminRoute';
 import AdminDashboard from './pages/admin/AdminDashboard';
 
 function App() {
