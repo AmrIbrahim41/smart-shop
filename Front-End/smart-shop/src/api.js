@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://127.0.0.1:8000/";
-
+const BASE_URL = "https://Amr41.pythonanywhere.com/";
 // 👇 التعديل هنا: شيلنا الهيدر الثابت عشان يسمح برفع الملفات
 const api = axios.create({
   baseURL: BASE_URL,
